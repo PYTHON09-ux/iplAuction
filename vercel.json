@@ -1,15 +1,15 @@
 {
-    "outputDirectory": "frontend/dist",
-    "experimentalServices": {
-        "frontend": {
-            "root": "frontend",
-            "routePrefix": "/",
-            "framework": "vite"
-        },
-        "backend": {
-            "root": "backend",
-            "entrypoint": "index.js",
-            "routePrefix": "/_backend"
-        }
+  "experimentalServices": {
+    "frontend": {
+      "root": "frontend",
+      "routePrefix": "/",
+      "framework": "vite",
+      "buildCommand": "npm run build"
+    },
+    "backend": {
+      "root": "backend",
+      "entrypoint": "index.js",
+      "routePrefix": "/_backend"
     }
+  }
 }
