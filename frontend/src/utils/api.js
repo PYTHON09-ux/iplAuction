@@ -1,4 +1,4 @@
-const BASE = '/api';
+const BASE = 'ipl-auction-dspf.vercel.app/api';
 
 const getToken = () => localStorage.getItem('ca_token');
 
