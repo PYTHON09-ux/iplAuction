@@ -3,11 +3,12 @@
         "frontend": {
             "root": "frontend",
             "routePrefix": "/",
-            "framework": "create-react-app"
+            "framework": "vite"
         },
         "backend": {
             "root": "backend",
-            "routePrefix": "/_/backend"
+            "entrypoint": "index.js",
+            "routePrefix": "/_backend"
         }
     }
 }
