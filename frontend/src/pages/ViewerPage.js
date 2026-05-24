@@ -3,7 +3,7 @@ import { api, formatCurrency, ROLE_COLORS } from '../utils/api';
 
 /* ─── Inject global CSS once ─── */
 const GLOBAL_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&family=Tiro+Devanagari+Marathi:ital@0;1&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap');
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -22,7 +22,6 @@ const GLOBAL_CSS = `
     --gold: #fbbf24;
     --font-display: 'Bebas Neue', sans-serif;
     --font-body: 'DM Sans', sans-serif;
-    --font-marathi: 'Tiro Devanagari Marathi', serif;
   }
 
   body { background: var(--bg); color: var(--text); font-family: var(--font-body); }
@@ -587,202 +586,6 @@ const GLOBAL_CSS = `
   .vp-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 
   .vp-footer { text-align: center; padding: 18px 0 28px; font-size: 11px; color: var(--text3); }
-
-  /* ── Memorial popup ── */
-  .vp-memorial-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.88);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 99999;
-    padding: 16px;
-    animation: vp-fadein .4s ease;
-    backdrop-filter: blur(6px);
-  }
-  .vp-memorial-modal {
-    background: linear-gradient(160deg, #0d1a2e 0%, #0a1220 60%, #111827 100%);
-    border: 1px solid rgba(251,191,36,0.25);
-    border-radius: 24px;
-    padding: 0;
-    max-width: 420px;
-    width: 100%;
-    animation: vp-popin .35s cubic-bezier(.34,1.56,.64,1);
-    overflow: hidden;
-    box-shadow: 0 0 60px rgba(251,191,36,0.08), 0 24px 60px rgba(0,0,0,0.6);
-  }
-  .vp-memorial-header {
-    background: linear-gradient(135deg, rgba(251,191,36,0.12) 0%, rgba(251,191,36,0.04) 100%);
-    border-bottom: 1px solid rgba(251,191,36,0.15);
-    padding: 20px 24px 16px;
-    text-align: center;
-  }
-  .vp-memorial-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 14px;
-    background: rgba(251,191,36,0.1);
-    border: 1px solid rgba(251,191,36,0.25);
-    border-radius: 100px;
-    font-size: 10px;
-    font-weight: 700;
-    color: #fbbf24;
-    text-transform: uppercase;
-    letter-spacing: .12em;
-    font-family: var(--font-body);
-    margin-bottom: 16px;
-  }
-  .vp-memorial-photo-wrap {
-    position: relative;
-    width: 110px;
-    height: 110px;
-    margin: 0 auto 14px;
-  }
-  .vp-memorial-photo-ring {
-    position: absolute;
-    inset: -5px;
-    border-radius: 50%;
-    border: 2px solid rgba(251,191,36,0.35);
-    animation: vp-spin-slow 8s linear infinite;
-  }
-  .vp-memorial-photo-ring::before {
-    content: '';
-    position: absolute;
-    top: -2px; left: 30%;
-    width: 40%; height: 4px;
-    background: #fbbf24;
-    border-radius: 2px;
-  }
-  @keyframes vp-spin-slow {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-  .vp-memorial-photo {
-    width: 110px;
-    height: 110px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 3px solid rgba(251,191,36,0.4);
-    display: block;
-  }
-  .vp-memorial-photo-fallback {
-    width: 110px;
-    height: 110px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #1e3a5f, #0f2040);
-    border: 3px solid rgba(251,191,36,0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2.8rem;
-  }
-  .vp-memorial-body {
-    padding: 20px 24px 24px;
-    text-align: center;
-  }
-  .vp-memorial-name {
-    font-family: var(--font-marathi);
-    font-size: 1.55rem;
-    color: #fbbf24;
-    line-height: 1.3;
-    margin-bottom: 4px;
-    letter-spacing: .01em;
-  }
-  .vp-memorial-subtitle {
-    font-family: var(--font-marathi);
-    font-size: 0.82rem;
-    color: rgba(251,191,36,0.55);
-    margin-bottom: 18px;
-    letter-spacing: .03em;
-  }
-  .vp-memorial-divider {
-    width: 60px;
-    height: 1px;
-    background: linear-gradient(to right, transparent, rgba(251,191,36,0.4), transparent);
-    margin: 0 auto 18px;
-  }
-  .vp-memorial-quote {
-    font-family: var(--font-marathi);
-    font-size: 1.02rem;
-    color: #e2e8f0;
-    line-height: 1.8;
-    margin-bottom: 10px;
-  }
-  .vp-memorial-quote2 {
-    font-family: var(--font-marathi);
-    font-size: 0.88rem;
-    color: rgba(226,232,240,0.65);
-    line-height: 1.75;
-    margin-bottom: 20px;
-    font-style: italic;
-  }
-  .vp-memorial-footer-text {
-    font-family: var(--font-marathi);
-    font-size: 0.78rem;
-    color: rgba(251,191,36,0.5);
-    margin-bottom: 18px;
-    letter-spacing: .02em;
-  }
-  .vp-memorial-btn {
-    width: 100%;
-    padding: 13px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, rgba(251,191,36,0.15), rgba(251,191,36,0.08));
-    border: 1px solid rgba(251,191,36,0.3);
-    color: #fbbf24;
-    font-family: var(--font-marathi);
-    font-size: 0.95rem;
-    cursor: pointer;
-    transition: all .2s;
-    letter-spacing: .02em;
-  }
-  .vp-memorial-btn:hover {
-    background: linear-gradient(135deg, rgba(251,191,36,0.25), rgba(251,191,36,0.12));
-    border-color: rgba(251,191,36,0.5);
-  }
-  .vp-memorial-candles {
-    display: flex;
-    justify-content: center;
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-  .vp-candle {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-  }
-  .vp-candle-flame {
-    width: 8px;
-    height: 12px;
-    background: radial-gradient(ellipse at 50% 80%, #fbbf24, #f97316 60%, transparent 100%);
-    border-radius: 50% 50% 30% 30%;
-    animation: vp-flicker 1.5s ease-in-out infinite;
-    filter: blur(0.5px);
-  }
-  .vp-candle:nth-child(2) .vp-candle-flame { animation-delay: .3s; }
-  .vp-candle:nth-child(3) .vp-candle-flame { animation-delay: .7s; }
-  @keyframes vp-flicker {
-    0%,100% { transform: scaleX(1) scaleY(1); opacity:1; }
-    25% { transform: scaleX(.85) scaleY(1.1); opacity:.9; }
-    50% { transform: scaleX(1.1) scaleY(.95); opacity:1; }
-    75% { transform: scaleX(.9) scaleY(1.05); opacity:.85; }
-  }
-  .vp-candle-body {
-    width: 8px;
-    height: 28px;
-    background: linear-gradient(to bottom, #fef3c7, #fde68a);
-    border-radius: 2px;
-    border: 1px solid rgba(251,191,36,0.3);
-  }
-  .vp-candle-base {
-    width: 12px;
-    height: 4px;
-    background: rgba(251,191,36,0.3);
-    border-radius: 2px;
-  }
 `;
 
 function injectStyles() {
@@ -797,8 +600,6 @@ function initials(name = '') {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
-const MEMORIAL_SHOWN_KEY = 'vp_memorial_shown_amit_pannore';
-
 export default function ViewerPage({ token }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -806,24 +607,10 @@ export default function ViewerPage({ token }) {
   const [activeTab, setActiveTab] = useState('live');
   const [loading, setLoading] = useState(true);
   const [soldPopup, setSoldPopup] = useState(null);
-  const [showMemorial, setShowMemorial] = useState(false);
   const prevSessionRef = useRef(null);
   const intervalRef = useRef(null);
 
   useEffect(() => { injectStyles(); }, []);
-
-  // Show memorial popup on first visit (once per browser session)
-  useEffect(() => {
-    const alreadySeen = sessionStorage.getItem(MEMORIAL_SHOWN_KEY);
-    if (!alreadySeen) {
-      setShowMemorial(true);
-    }
-  }, []);
-
-  const handleCloseMemorial = () => {
-    sessionStorage.setItem(MEMORIAL_SHOWN_KEY, '1');
-    setShowMemorial(false);
-  };
 
   const fetchData = async () => {
     try {
@@ -887,69 +674,6 @@ export default function ViewerPage({ token }) {
 
   return (
     <div className="vp-page">
-
-      {/* ─── MEMORIAL POPUP (first visit only) ─────────────── */}
-      {showMemorial && (
-        <div className="vp-memorial-overlay" onClick={handleCloseMemorial}>
-          <div className="vp-memorial-modal" onClick={e => e.stopPropagation()}>
-            <div className="vp-memorial-header">
-              <div className="vp-memorial-tag">🕯️ स्मरणांजली</div>
-              <div className="vp-memorial-photo-wrap">
-                <div className="vp-memorial-photo-ring" />
-                <img
-                  src="../images/amit.jpeg"
-                  alt="अमित पंनोरे"
-                  className="vp-memorial-photo"
-                  onError={e => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
-                  }}
-                />
-                <div className="vp-memorial-photo-fallback" style={{ display: 'none' }}>🙏</div>
-              </div>
-            </div>
-            <div className="vp-memorial-body">
-              <div className="vp-memorial-name">मा. श्री. अमित पंनोरे</div>
-              <div className="vp-memorial-subtitle">गडहिंग्लजचा सिंह</div>
-              <div className="vp-memorial-divider" />
-              <div className="vp-memorial-candles">
-                <div className="vp-candle">
-                  <div className="vp-candle-flame" />
-                  <div className="vp-candle-body" />
-                  <div className="vp-candle-base" />
-                </div>
-                <div className="vp-candle">
-                  <div className="vp-candle-flame" />
-                  <div className="vp-candle-body" />
-                  <div className="vp-candle-base" />
-                </div>
-                <div className="vp-candle">
-                  <div className="vp-candle-flame" />
-                  <div className="vp-candle-body" />
-                  <div className="vp-candle-base" />
-                </div>
-              </div>
-              <div className="vp-memorial-quote">
-                "ऐका हो मंडळी 😎<br />
-                लिलावात पैसे कमी पडले तर उगाच रडायचं नाय!"
-              </div>
-
-              <div className="vp-memorial-quote2">
-                "कोल्हापुरात दोनच गोष्टी भारी —<br />
-                तांबडा पांढरा आणि आपला क्रिकेटचा जल्लोष 🔥🏏"
-              </div>
-
-              <div className="vp-memorial-footer-text">
-                जिंकला तर मिरवायचं… हरला तर चहा पाजायचा ☕😂
-              </div>
-
-              <button className="vp-memorial-btn" onClick={handleCloseMemorial}>
-                😎 चला राव — आता बोली लावूया!
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ─── SOLD POPUP ────────────────────────────────────── */}
       {soldPopup && (
@@ -1073,12 +797,12 @@ export default function ViewerPage({ token }) {
               <div className="vp-stage-body">
                 {currentSession.player?.imageUrl
                   ? <img src={currentSession.player.imageUrl} alt={currentSession.player.name}
-                    className="vp-player-avatar"
-                    style={{ border: `3px solid ${roleColor}`, boxShadow: `0 0 24px ${roleColor}40` }} />
+                      className="vp-player-avatar"
+                      style={{ border: `3px solid ${roleColor}`, boxShadow: `0 0 24px ${roleColor}40` }} />
                   : <div className="vp-player-avatar-fallback"
-                    style={{ border: `3px solid ${roleColor}`, background: `${roleColor}14`, color: roleColor }}>
-                    {initials(currentSession.player?.name)}
-                  </div>
+                      style={{ border: `3px solid ${roleColor}`, background: `${roleColor}14`, color: roleColor }}>
+                      {initials(currentSession.player?.name)}
+                    </div>
                 }
 
                 <div className="vp-role-badge" style={{ background: `${roleColor}14`, color: roleColor }}>
@@ -1181,9 +905,9 @@ export default function ViewerPage({ token }) {
                     </div>
                     {h.status === 'Sold'
                       ? <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontWeight: 700, color: '#22c55e', fontSize: 13 }}>{formatCurrency(h.currentBid)}</div>
-                        <div style={{ fontSize: 11, color: '#4b5e78' }}>→ {h.currentBidTeam?.shortName}</div>
-                      </div>
+                          <div style={{ fontWeight: 700, color: '#22c55e', fontSize: 13 }}>{formatCurrency(h.currentBid)}</div>
+                          <div style={{ fontSize: 11, color: '#4b5e78' }}>→ {h.currentBidTeam?.shortName}</div>
+                        </div>
                       : <span className="vp-badge vp-badge-unsold">Unsold</span>
                     }
                   </div>
@@ -1212,9 +936,9 @@ export default function ViewerPage({ token }) {
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
                           {p.status === 'Sold'
                             ? <>
-                              <div style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>{formatCurrency(p.soldPrice)}</div>
-                              <div style={{ fontSize: 11, color: '#4b5e78' }}>{p.team?.shortName}</div>
-                            </>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>{formatCurrency(p.soldPrice)}</div>
+                                <div style={{ fontSize: 11, color: '#4b5e78' }}>{p.team?.shortName}</div>
+                              </>
                             : <span className={`vp-badge vp-badge-${p.status.toLowerCase()}`}>{p.status}</span>
                           }
                         </div>
@@ -1280,8 +1004,8 @@ export default function ViewerPage({ token }) {
                             {p.imageUrl
                               ? <img src={p.imageUrl} alt={p.name} style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover' }} />
                               : <div style={{ width: 18, height: 18, borderRadius: '50%', background: `${ROLE_COLORS[p.role] || '#64748b'}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 600, color: ROLE_COLORS[p.role] || '#64748b', flexShrink: 0 }}>
-                                {initials(p.name)}
-                              </div>
+                                  {initials(p.name)}
+                                </div>
                             }
                             <span>{p.name.split(' ')[0]}</span>
                           </div>
@@ -1300,7 +1024,7 @@ export default function ViewerPage({ token }) {
       </div>
 
       <div className="vp-footer">🏏 CricAuction · Read-only viewer · Auto-refreshes every 4 seconds</div>
-      <div className="vp-footer">मा. श्री. अमित पंनोरे यांचा स्मरणार्थ ~ गडहिंग्लज चा सिहं </div>
+      <div className="vp-footer">मा. श्री. पवन पाटणे यांचा सहकार्याने ❤️ </div>
     </div>
   );
 }
