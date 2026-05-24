@@ -1024,6 +1024,7 @@ export default function ViewerPage({ token }) {
       </div>
 
       <div className="vp-footer">🏏 CricAuction · Read-only viewer · Auto-refreshes every 4 seconds</div>
+      <div className="vp-footer">मा. श्री. अमित पंनोरे यांचा स्मरणार्थ ~ गडहिंग्लज चा सिहं </div>
     </div>
   );
 }
