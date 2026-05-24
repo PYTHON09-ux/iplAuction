@@ -897,7 +897,7 @@ export default function ViewerPage({ token }) {
               <div className="vp-memorial-photo-wrap">
                 <div className="vp-memorial-photo-ring" />
                 <img
-                  src="./utils/images/amit.jpeg"
+                  src="../images/amit.jpeg"
                   alt="अमित पंनोरे"
                   className="vp-memorial-photo"
                   onError={e => {
@@ -930,18 +930,21 @@ export default function ViewerPage({ token }) {
                 </div>
               </div>
               <div className="vp-memorial-quote">
-                तुमच्या स्मृती आमच्या मनात सदैव जिवंत राहतील।<br />
-                तुम्ही आमच्यासाठी केलेल्या कार्याचे आम्ही सदा ऋणी आहोत।
+                "ऐका हो मंडळी 😎<br />
+                लिलावात पैसे कमी पडले तर उगाच रडायचं नाय!"
               </div>
+
               <div className="vp-memorial-quote2">
-                "जे मातीत मिळाले, ते तारे बनले —<br />
-                आठवणींच्या आकाशी सदैव चमकत राहतील।"
+                "कोल्हापुरात दोनच गोष्टी भारी —<br />
+                तांबडा पांढरा आणि आपला क्रिकेटचा जल्लोष 🔥🏏"
               </div>
+
               <div className="vp-memorial-footer-text">
-                हा क्रिकेट लिलाव त्यांच्या प्रेमळ स्मृतीस समर्पित आहे
+                जिंकला तर मिरवायचं… हरला तर चहा पाजायचा ☕😂
               </div>
+
               <button className="vp-memorial-btn" onClick={handleCloseMemorial}>
-                🙏 पुढे जा — त्यांच्या स्मृतींना वंदन
+                😎 चला राव — आता बोली लावूया!
               </button>
             </div>
           </div>
@@ -1070,12 +1073,12 @@ export default function ViewerPage({ token }) {
               <div className="vp-stage-body">
                 {currentSession.player?.imageUrl
                   ? <img src={currentSession.player.imageUrl} alt={currentSession.player.name}
-                      className="vp-player-avatar"
-                      style={{ border: `3px solid ${roleColor}`, boxShadow: `0 0 24px ${roleColor}40` }} />
+                    className="vp-player-avatar"
+                    style={{ border: `3px solid ${roleColor}`, boxShadow: `0 0 24px ${roleColor}40` }} />
                   : <div className="vp-player-avatar-fallback"
-                      style={{ border: `3px solid ${roleColor}`, background: `${roleColor}14`, color: roleColor }}>
-                      {initials(currentSession.player?.name)}
-                    </div>
+                    style={{ border: `3px solid ${roleColor}`, background: `${roleColor}14`, color: roleColor }}>
+                    {initials(currentSession.player?.name)}
+                  </div>
                 }
 
                 <div className="vp-role-badge" style={{ background: `${roleColor}14`, color: roleColor }}>
@@ -1178,9 +1181,9 @@ export default function ViewerPage({ token }) {
                     </div>
                     {h.status === 'Sold'
                       ? <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div style={{ fontWeight: 700, color: '#22c55e', fontSize: 13 }}>{formatCurrency(h.currentBid)}</div>
-                          <div style={{ fontSize: 11, color: '#4b5e78' }}>→ {h.currentBidTeam?.shortName}</div>
-                        </div>
+                        <div style={{ fontWeight: 700, color: '#22c55e', fontSize: 13 }}>{formatCurrency(h.currentBid)}</div>
+                        <div style={{ fontSize: 11, color: '#4b5e78' }}>→ {h.currentBidTeam?.shortName}</div>
+                      </div>
                       : <span className="vp-badge vp-badge-unsold">Unsold</span>
                     }
                   </div>
@@ -1209,9 +1212,9 @@ export default function ViewerPage({ token }) {
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
                           {p.status === 'Sold'
                             ? <>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>{formatCurrency(p.soldPrice)}</div>
-                                <div style={{ fontSize: 11, color: '#4b5e78' }}>{p.team?.shortName}</div>
-                              </>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>{formatCurrency(p.soldPrice)}</div>
+                              <div style={{ fontSize: 11, color: '#4b5e78' }}>{p.team?.shortName}</div>
+                            </>
                             : <span className={`vp-badge vp-badge-${p.status.toLowerCase()}`}>{p.status}</span>
                           }
                         </div>
@@ -1277,8 +1280,8 @@ export default function ViewerPage({ token }) {
                             {p.imageUrl
                               ? <img src={p.imageUrl} alt={p.name} style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover' }} />
                               : <div style={{ width: 18, height: 18, borderRadius: '50%', background: `${ROLE_COLORS[p.role] || '#64748b'}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 600, color: ROLE_COLORS[p.role] || '#64748b', flexShrink: 0 }}>
-                                  {initials(p.name)}
-                                </div>
+                                {initials(p.name)}
+                              </div>
                             }
                             <span>{p.name.split(' ')[0]}</span>
                           </div>
