@@ -427,25 +427,81 @@ export default function ViewerPage({ token }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const fetchData = async () => {
-    try {
-      const d = await api.getEventLive(token);
-      const prev = prevSessionRef.current;
-      const curr = d.currentSession;
-      if (prev && prev.status !== 'Sold' && prev.status !== 'Unsold' && curr?.player) {
-        if (curr.status === 'Sold') {
-          setPopup({ type:'sold', player:curr.player, price:curr.currentBid, team:curr.currentBidTeam, teamName:curr.currentBidTeamName });
-        } else if (curr.status === 'Unsold') {
-          setPopup({ type:'unsold', player:curr.player });
-        }
+ // REPLACE ONLY YOUR fetchData FUNCTION WITH THIS
+
+const lastPopupRef = useRef(null);
+
+const fetchData = async () => {
+  try {
+    const d = await api.getEventLive(token);
+
+    const prev = prevSessionRef.current;
+    const curr = d.currentSession;
+
+    console.log({
+      prevStatus: prev?.status,
+      currStatus: curr?.status,
+      prevPlayer: prev?.player?.name,
+      currPlayer: curr?.player?.name
+    });
+
+    /* ─────────────────────────────────────────────
+       FIXED POPUP DETECTION
+    ───────────────────────────────────────────── */
+
+    if (
+      prev?.player?._id === curr?.player?._id &&
+      prev?.status !== curr?.status
+    ) {
+
+      /* SOLD POPUP */
+      if (
+        curr.status === 'Sold' &&
+        lastPopupRef.current !== curr.player._id
+      ) {
+
+        lastPopupRef.current = curr.player._id;
+
+        setPopup({
+          type: 'sold',
+          player: curr.player,
+          price: curr.currentBid,
+          team: curr.currentBidTeam,
+          teamName: curr.currentBidTeamName
+        });
       }
-      prevSessionRef.current = curr;
-      setData(d);
-      setLastUpdated(new Date());
-      setError(null);
-    } catch (e) { setError(e.message); }
-    finally { setLoading(false); }
-  };
+
+      /* UNSOLD POPUP */
+      if (
+        curr.status === 'Unsold' &&
+        lastPopupRef.current !== curr.player._id
+      ) {
+
+        lastPopupRef.current = curr.player._id;
+
+        setPopup({
+          type: 'unsold',
+          player: curr.player
+        });
+      }
+    }
+
+    /* save latest session */
+    prevSessionRef.current = curr;
+
+    setData(d);
+    setLastUpdated(new Date());
+    setError(null);
+
+  } catch (e) {
+
+    setError(e.message);
+
+  } finally {
+
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchData();
