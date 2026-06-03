@@ -1,634 +1,709 @@
 import { useEffect, useState, useRef } from 'react';
 import { api, formatCurrency, ROLE_COLORS } from '../utils/api';
 
-/* ─── Inject global CSS once ─── */
 const GLOBAL_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap');
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg: #080c14;
-    --bg2: #0e1623;
-    --bg3: #141e2e;
-    --border: rgba(255,255,255,0.07);
-    --border2: rgba(255,255,255,0.12);
-    --text: #f0f4ff;
-    --text2: #94a3b8;
-    --text3: #4b5e78;
-    --green: #22c55e;
-    --red: #ef4444;
-    --amber: #f59e0b;
-    --gold: #fbbf24;
-    --font-display: 'Bebas Neue', sans-serif;
-    --font-body: 'DM Sans', sans-serif;
+    --bg:    #06090f;
+    --bg2:   #0c1220;
+    --bg3:   #111a2e;
+    --bg4:   #172038;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text:  #eaf0ff;
+    --text2: #7a90b8;
+    --text3: #3a4f6e;
+    --green: #16d975;
+    --red:   #f04a4a;
+    --amber: #f5a623;
+    --gold:  #ffe066;
+    --cyan:  #38d9f5;
+    --disp:  'Barlow Condensed', sans-serif;
+    --body:  'Barlow', sans-serif;
+    --radius: 16px;
+    --radius-sm: 10px;
   }
 
-  body { background: var(--bg); color: var(--text); font-family: var(--font-body); }
+  body { background: var(--bg); color: var(--text); font-family: var(--body); -webkit-font-smoothing: antialiased; }
 
-  .vp-page { min-height: 100vh; background: var(--bg); }
+  /* ── LAYOUT ── */
+  .vp { min-height: 100vh; display: flex; flex-direction: column; }
 
-  /* ── Banner ── */
-  .vp-banner {
-    position: relative;
-    width: 100%;
-    min-height: 280px;
-    overflow: hidden;
+  /* TOP HEADER BAR */
+  .vp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .vp-header-left { display: flex; align-items: center; gap: 12px; }
+  .vp-event-logo {
+    width: 36px; height: 36px; border-radius: 8px;
+    object-fit: cover; border: 1px solid var(--border2);
+  }
+  .vp-event-logo-fb {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: var(--bg3); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+  }
+  .vp-event-name {
+    font-family: var(--disp);
+    font-size: 1.3rem;
+    letter-spacing: .06em;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+  .vp-event-season { font-size: 11px; color: var(--text3); letter-spacing: .06em; margin-top: 2px; }
+  .vp-live-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 14px;
+    background: rgba(240,74,74,0.15);
+    border: 1px solid rgba(240,74,74,0.3);
+    border-radius: 100px;
+    font-size: 11px; font-weight: 700;
+    color: #f87171; letter-spacing: .1em; text-transform: uppercase;
+  }
+  .vp-live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #f04a4a;
+    animation: pulse 1.1s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.75)} }
+  .vp-updated { font-size: 11px; color: var(--text3); }
+
+  /* STAT STRIP */
+  .vp-strip {
+    display: flex;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .vp-strip-item {
+    flex: 1; padding: 8px 6px; text-align: center;
+    border-right: 1px solid var(--border);
+  }
+  .vp-strip-item:last-child { border-right: none; }
+  .vp-strip-val {
+    font-family: var(--disp);
+    font-size: clamp(1.2rem, 3vw, 1.8rem);
+    font-weight: 800;
+    line-height: 1;
+  }
+  .vp-strip-label {
+    font-size: clamp(9px, 1.5vw, 11px);
+    color: var(--text3);
+    text-transform: uppercase; letter-spacing: .08em;
+    margin-top: 2px;
+  }
+
+  /* MAIN AREA */
+  .vp-main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    min-height: 0;
+  }
+
+  /* CENTER — Player Stage */
+  .vp-center {
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
+    border-right: 1px solid var(--border);
+    overflow: hidden;
   }
-  .vp-banner-img {
+
+  /* Player card */
+  .vp-player-card {
+    flex: 1;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    min-height: 0;
+  }
+
+  /* IMAGE ZONE — big square */
+  .vp-img-zone {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg3);
+    min-height: 0;
+  }
+  .vp-img-zone img {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center top;
+    object-position: top center;
   }
-  .vp-banner-overlay {
+  .vp-img-grad {
     position: absolute;
     inset: 0;
     background: linear-gradient(
       to bottom,
-      rgba(8,12,20,0.25) 0%,
-      rgba(8,12,20,0.55) 40%,
-      rgba(8,12,20,0.92) 80%,
-      rgba(8,12,20,1) 100%
+      transparent 40%,
+      rgba(6,9,15,0.6) 70%,
+      rgba(6,9,15,0.96) 100%
     );
+    pointer-events: none;
   }
-  .vp-banner-noimgbg {
+  .vp-img-fallback {
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, #0a1628 0%, #0f2040 45%, #1a1035 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--disp);
+    font-size: clamp(4rem, 12vw, 10rem);
+    font-weight: 900;
+    letter-spacing: .05em;
+    opacity: .12;
   }
-  .vp-banner-noimgpattern {
+  .vp-img-overlay {
     position: absolute;
-    inset: 0;
-    opacity: 0.04;
-    background-image: repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%);
-    background-size: 28px 28px;
-  }
-  .vp-banner-content {
-    position: relative;
+    bottom: 0; left: 0; right: 0;
+    padding: 20px 24px;
     z-index: 2;
-    padding: 24px 20px 28px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
   }
-  .vp-banner-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .vp-live-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 14px;
-    background: rgba(239,68,68,0.18);
-    border: 1px solid rgba(239,68,68,0.35);
-    border-radius: 100px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #f87171;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-  }
-  .vp-live-dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: #ef4444;
-    animation: vp-pulse 1.2s infinite;
-    flex-shrink: 0;
-  }
-  @keyframes vp-pulse {
-    0%,100% { opacity:1; transform:scale(1); }
-    50% { opacity:.4; transform:scale(.8); }
-  }
-  .vp-updated {
-    font-size: 11px;
-    color: rgba(255,255,255,0.3);
-    letter-spacing: .03em;
-  }
-  .vp-banner-event {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .vp-banner-logo {
-    width: 54px; height: 54px;
-    border-radius: 12px;
-    object-fit: cover;
-    border: 2px solid rgba(255,255,255,0.15);
-    flex-shrink: 0;
-  }
-  .vp-banner-logo-fallback {
-    width: 54px; height: 54px;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.08);
-    border: 2px solid rgba(255,255,255,0.12);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-display);
-    font-size: 1.1rem;
-    color: rgba(255,255,255,0.5);
-    flex-shrink: 0;
-  }
-  .vp-banner-name {
-    font-family: var(--font-display);
-    font-size: clamp(2rem, 6vw, 3.2rem);
-    color: #fff;
-    line-height: 1;
-    letter-spacing: .03em;
-    text-shadow: 0 2px 20px rgba(0,0,0,0.5);
-  }
-  .vp-banner-season {
-    font-size: 13px;
-    color: rgba(255,255,255,0.45);
-    letter-spacing: .06em;
-    margin-top: 3px;
-  }
-  .vp-banner-stats {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-  .vp-bstat {
-    flex: 1;
-    min-width: 70px;
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 10px;
-    padding: 8px 10px;
-    text-align: center;
-  }
-  .vp-bstat-val {
-    font-family: var(--font-display);
-    font-size: 1.5rem;
-    line-height: 1;
-  }
-  .vp-bstat-label {
-    font-size: 10px;
-    color: rgba(255,255,255,0.4);
-    text-transform: uppercase;
-    letter-spacing: .07em;
-    margin-top: 3px;
-  }
-
-  /* ── Summary pills ── */
-  .vp-summary {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    padding: 14px 16px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-  .vp-sc {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 8px;
-    text-align: center;
-  }
-  .vp-sc-val { font-family: var(--font-display); font-size: 1.6rem; line-height: 1; }
-  .vp-sc-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-top: 3px; }
-
-  /* ── Content grid ── */
-  .vp-content {
-    display: grid;
-    grid-template-columns: 1fr 340px;
-    gap: 16px;
-    padding: 16px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-  @media (max-width: 860px) {
-    .vp-content { grid-template-columns: 1fr; }
-    .vp-right { order: -1; }
-    .vp-summary { grid-template-columns: repeat(2, 1fr); }
-    .vp-banner { min-height: 220px; }
-    .vp-teams-grid {
-      display: grid !important;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-  }
-  @media (max-width: 480px) {
-    .vp-summary { grid-template-columns: repeat(4, 1fr); gap: 6px; }
-    .vp-sc-val { font-size: 1.2rem; }
-    .vp-teams-grid { grid-template-columns: 1fr !important; }
-    .vp-stage-body { padding: 20px 14px !important; }
-    .vp-bid-box { padding: 14px 16px !important; }
-    .vp-player-stats { gap: 6px !important; }
-    .vp-bid-history { gap: 5px !important; }
-  }
-
-  .vp-section-label {
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--text3);
-    text-transform: uppercase;
-    letter-spacing: .12em;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  /* ── Stage ── */
-  .vp-stage {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    overflow: hidden;
-    margin-bottom: 14px;
-  }
-  .vp-stage-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 18px;
-    border-bottom: 1px solid var(--border);
-  }
-  .vp-stage-body {
-    padding: 28px 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-  .vp-player-avatar {
-    width: 96px; height: 96px;
-    border-radius: 50%;
-    object-fit: cover;
-    margin-bottom: 14px;
-    flex-shrink: 0;
-  }
-  .vp-player-avatar-fallback {
-    width: 96px; height: 96px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-display);
-    font-size: 1.8rem;
-    margin-bottom: 14px;
-    flex-shrink: 0;
-  }
-  .vp-role-badge {
+  .vp-role-pill {
     display: inline-block;
-    padding: 3px 12px;
+    padding: 3px 14px;
     border-radius: 100px;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: .07em;
+    font-size: clamp(10px, 1.5vw, 12px);
+    font-weight: 700;
+    letter-spacing: .1em;
     text-transform: uppercase;
     margin-bottom: 8px;
   }
-  .vp-player-name {
-    font-family: var(--font-display);
-    font-size: clamp(1.5rem, 4vw, 2rem);
-    color: var(--gold);
-    line-height: 1.05;
-    margin-bottom: 4px;
+  .vp-player-name-big {
+    font-family: var(--disp);
+    font-size: clamp(2rem, 6vw, 4.5rem);
+    font-weight: 900;
+    color: #fff;
+    line-height: .95;
+    letter-spacing: .02em;
+    text-shadow: 0 2px 30px rgba(0,0,0,0.6);
+    margin-bottom: 6px;
+  }
+  .vp-player-sub {
+    font-size: clamp(12px, 1.8vw, 15px);
+    color: rgba(255,255,255,0.5);
     letter-spacing: .03em;
   }
-  .vp-player-meta { font-size: 13px; color: var(--text2); margin-bottom: 16px; }
-  .vp-player-stats {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
+
+  /* BID SECTION */
+  .vp-bid-section {
+    padding: 18px 24px 20px;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
   }
-  .vp-pstat {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 8px 14px;
-    text-align: center;
-    min-width: 64px;
-  }
-  .vp-pstat-val { font-family: var(--font-display); font-size: 1.2rem; line-height: 1; }
-  .vp-pstat-label { font-size: 10px; color: var(--text3); margin-top: 3px; text-transform: uppercase; letter-spacing: .05em; }
-  .vp-bid-box {
-    background: var(--bg3);
-    border: 1px solid var(--border2);
-    border-radius: 14px;
-    padding: 18px 24px;
+  .vp-bid-main {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    gap: 16px;
     margin-bottom: 14px;
-    min-width: 200px;
-    width: 100%;
-    max-width: 320px;
   }
-  .vp-bid-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 4px; }
-  .vp-bid-amount { font-family: var(--font-display); font-size: 2.6rem; line-height: 1; }
-  .vp-bid-team-row {
+  .vp-current-bid-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    margin-bottom: 4px;
+  }
+  .vp-current-bid-amount {
+    font-family: var(--disp);
+    font-size: clamp(2.4rem, 5vw, 4rem);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: .01em;
+  }
+  .vp-bid-team-info {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-top: 10px;
+    gap: 10px;
+    margin-top: 8px;
   }
-  .vp-bid-history {
+  .vp-team-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .vp-bid-team-name {
+    font-size: clamp(13px, 2vw, 16px);
+    font-weight: 600;
+  }
+  .vp-bid-count-box {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .vp-bid-count-num {
+    font-family: var(--disp);
+    font-size: clamp(2rem, 3.5vw, 3rem);
+    font-weight: 900;
+    color: var(--cyan);
+    line-height: 1;
+  }
+  .vp-bid-count-label {
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    margin-top: 2px;
+  }
+
+  /* Player stats row */
+  .vp-stats-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .vp-stat-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 16px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    min-width: 60px;
+  }
+  .vp-stat-chip-val {
+    font-family: var(--disp);
+    font-size: clamp(1.1rem, 2.2vw, 1.6rem);
+    font-weight: 800;
+    line-height: 1;
+  }
+  .vp-stat-chip-label {
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    margin-top: 3px;
+  }
+
+  /* Bid history chips */
+  .vp-history-chips {
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
-    justify-content: center;
-    width: 100%;
+    margin-top: 12px;
   }
-  .vp-bid-chip {
-    padding: 4px 10px;
+  .vp-hchip {
+    padding: 4px 12px;
     border-radius: 100px;
     font-size: 12px;
+    background: var(--bg3);
     border: 1px solid var(--border);
     color: var(--text3);
-    background: var(--bg3);
   }
-  .vp-bid-chip-top {
-    background: rgba(34,197,94,0.1);
-    border-color: rgba(34,197,94,0.3);
+  .vp-hchip-top {
+    background: rgba(22,217,117,0.1);
+    border-color: rgba(22,217,117,0.3);
     color: var(--green);
+    font-weight: 600;
   }
 
-  /* ── Idle stage ── */
+  /* IDLE */
   .vp-idle {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 48px 24px;
-    text-align: center;
-    margin-bottom: 14px;
-  }
-
-  /* ── Tabs ── */
-  .vp-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 14px;
-  }
-  .vp-tabs {
-    display: flex;
-    gap: 0;
-    background: var(--bg3);
-    border-radius: 8px;
-    padding: 3px;
-    margin-bottom: 14px;
-  }
-  .vp-tab {
     flex: 1;
-    padding: 7px 6px;
-    border-radius: 6px;
-    font-size: 12px;
-    text-align: center;
-    cursor: pointer;
-    color: var(--text3);
-    white-space: nowrap;
-    transition: all .15s;
-  }
-  .vp-tab.active {
-    background: var(--bg);
-    color: var(--text);
-    font-weight: 600;
-    border: 1px solid var(--border2);
-  }
-  .vp-player-row {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .vp-player-row:last-child { border-bottom: none; }
-  .vp-avatar-sm {
-    width: 34px; height: 34px;
-    border-radius: 50%;
-    background: var(--bg3);
-    display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
-    font-weight: 600;
-    flex-shrink: 0;
-    overflow: hidden;
-  }
-  .vp-avatar-sm img { width: 100%; height: 100%; object-fit: cover; }
-  .vp-pname { font-size: 13px; font-weight: 600; }
-  .vp-prole { font-size: 11px; color: var(--text3); }
-  .vp-badge {
-    padding: 3px 9px;
-    border-radius: 100px;
-    font-size: 10px;
-    font-weight: 600;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  .vp-badge-sold { background: rgba(34,197,94,0.1); color: var(--green); }
-  .vp-badge-unsold { background: rgba(239,68,68,0.1); color: var(--red); }
-  .vp-badge-available { background: rgba(245,158,11,0.1); color: var(--amber); }
-  .vp-empty {
+    padding: 40px 24px;
     text-align: center;
-    padding: 28px 0;
-    color: var(--text3);
-    font-size: 13px;
-  }
-  .vp-pill { padding: 3px 10px; border-radius: 100px; font-size: 11px; }
-
-  /* ── Teams ── */
-  .vp-teams-grid { display: flex; flex-direction: column; gap: 10px; }
-  .vp-team-card {
     background: var(--bg2);
+  }
+  .vp-idle-icon {
+    font-size: clamp(3rem, 8vw, 6rem);
+    margin-bottom: 16px;
+    opacity: .5;
+  }
+  .vp-idle-title {
+    font-family: var(--disp);
+    font-size: clamp(1.4rem, 4vw, 2.4rem);
+    font-weight: 900;
+    color: var(--text3);
+    letter-spacing: .05em;
+    margin-bottom: 8px;
+  }
+  .vp-idle-sub { font-size: 14px; color: var(--text3); }
+  .vp-idle-last {
+    margin-top: 24px;
+    padding: 16px 24px;
+    background: var(--bg3);
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: var(--radius);
+  }
+  .vp-idle-last-label {
+    font-size: 10px; color: var(--text3);
+    text-transform: uppercase; letter-spacing: .08em;
+    margin-bottom: 6px;
+  }
+  .vp-idle-last-name { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+  .vp-idle-last-price { color: var(--green); font-weight: 700; font-size: .95rem; }
+
+  /* RIGHT PANEL */
+  .vp-right {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg2);
+  }
+  .vp-panel-header {
+    padding: 12px 16px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .vp-panel-header-icon { font-size: 14px; }
+
+  /* TEAMS */
+  .vp-teams {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .vp-teams::-webkit-scrollbar { width: 3px; }
+  .vp-teams::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .vp-team-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
     overflow: hidden;
   }
-  .vp-team-header {
+  .vp-team-card-header {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 11px 13px;
-    border-bottom: 1px solid var(--border);
+    padding: 10px 12px;
   }
-  .vp-team-logo {
-    width: 34px; height: 34px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-display);
-    font-size: 11px;
+  .vp-team-badge {
+    width: 32px; height: 32px;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--disp);
+    font-size: 10px; font-weight: 800;
     color: #fff;
     flex-shrink: 0;
     overflow: hidden;
   }
-  .vp-team-logo img { width: 100%; height: 100%; object-fit: cover; }
-  .vp-budget-bar {
+  .vp-team-badge img { width: 100%; height: 100%; object-fit: cover; }
+  .vp-team-name-sm { font-weight: 600; font-size: 13px; line-height: 1.2; }
+  .vp-team-budget-sm {
+    font-family: var(--disp);
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .vp-budget-track {
     height: 3px;
-    background: var(--bg3);
+    background: var(--bg);
+    margin: 0 12px 10px;
     border-radius: 2px;
     overflow: hidden;
-    margin: 5px 0 8px;
   }
-  .vp-budget-fill { height: 100%; border-radius: 2px; transition: width .4s ease; }
-  .vp-player-chips { display: flex; flex-wrap: wrap; gap: 5px; }
-  .vp-chip {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 3px 7px;
-    background: var(--bg3);
+  .vp-budget-fill { height: 100%; border-radius: 2px; transition: width .5s ease; }
+  .vp-team-players {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    padding: 0 10px 10px;
+  }
+  .vp-player-mini {
+    display: flex; align-items: center; gap: 4px;
+    padding: 2px 7px;
+    background: var(--bg4);
     border: 1px solid var(--border);
     border-radius: 6px;
     font-size: 11px;
   }
+  .vp-mini-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
-  /* ── Sold popup ── */
-  .vp-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.78);
+  /* HISTORY PANEL — bottom right */
+  .vp-history {
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  .vp-history::-webkit-scrollbar { width: 3px; }
+  .vp-history::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .vp-history-row {
     display: flex;
     align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    padding: 16px;
-    animation: vp-fadein .2s ease;
+    gap: 10px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
   }
-  @keyframes vp-fadein { from { opacity:0; } to { opacity:1; } }
-  .vp-modal {
+  .vp-history-row:last-child { border-bottom: none; }
+  .vp-history-status { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .vp-history-name { font-size: 12px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vp-history-role { font-size: 10px; color: var(--text3); }
+  .vp-history-price { font-size: 12px; font-weight: 700; color: var(--green); flex-shrink: 0; }
+  .vp-history-team { font-size: 10px; color: var(--text3); flex-shrink: 0; }
+
+  /* SOLD OVERLAY */
+  .vp-sold-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.85);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    animation: fadein .2s ease;
+  }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  .vp-sold-modal {
     background: var(--bg2);
     border: 1px solid var(--border2);
-    border-radius: 22px;
-    padding: 36px 32px;
-    text-align: center;
-    max-width: 400px;
-    width: 100%;
-    animation: vp-popin .25s cubic-bezier(.34,1.56,.64,1);
-  }
-  @keyframes vp-popin {
-    from { transform: scale(.85); opacity:0; }
-    to { transform: scale(1); opacity:1; }
-  }
-  .vp-sold-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 16px;
-    background: rgba(34,197,94,0.12);
-    border: 1px solid rgba(34,197,94,0.28);
-    border-radius: 100px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--green);
-    text-transform: uppercase;
-    letter-spacing: .1em;
-    margin-bottom: 18px;
-  }
-  .vp-sold-name {
-    font-family: var(--font-display);
-    font-size: clamp(1.6rem, 5vw, 2.2rem);
-    color: var(--gold);
-    margin-bottom: 4px;
-    letter-spacing: .03em;
-  }
-  .vp-sold-role { font-size: 13px; color: var(--text2); margin-bottom: 22px; }
-  .vp-sold-price-box {
-    background: var(--bg3);
-    border: 1px solid var(--border2);
-    border-radius: 14px;
-    padding: 16px 24px;
-    display: inline-block;
-    margin-bottom: 18px;
-  }
-  .vp-sold-price { font-family: var(--font-display); font-size: 2.4rem; color: var(--green); line-height: 1; }
-  .vp-sold-team-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 22px;
-  }
-  .vp-sold-tlogo {
-    width: 36px; height: 36px;
-    border-radius: 8px;
-    object-fit: cover;
-    flex-shrink: 0;
+    border-radius: 24px;
+    width: 100%; max-width: 460px;
     overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    animation: popin .3s cubic-bezier(.34,1.56,.64,1);
   }
-  .vp-dismiss {
-    width: 100%;
-    padding: 12px;
-    border-radius: 10px;
+  @keyframes popin { from { transform: scale(.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .vp-sold-img-zone {
+    position: relative;
+    height: 240px;
+    overflow: hidden;
+    background: var(--bg3);
+  }
+  .vp-sold-img-zone img {
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: top center;
+  }
+  .vp-sold-img-grad {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 30%, rgba(6,9,15,.95) 100%);
+  }
+  .vp-sold-img-name {
+    position: absolute;
+    bottom: 12px; left: 18px; right: 18px;
+    font-family: var(--disp);
+    font-size: 2rem; font-weight: 900;
+    color: var(--gold);
+    letter-spacing: .04em;
+    line-height: 1;
+    z-index: 2;
+  }
+  .vp-sold-body {
+    padding: 20px 24px 24px;
+    text-align: center;
+  }
+  .vp-sold-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 18px;
+    background: rgba(22,217,117,0.12);
+    border: 1px solid rgba(22,217,117,0.3);
+    border-radius: 100px;
+    font-size: 11px; font-weight: 800;
+    color: var(--green);
+    letter-spacing: .12em; text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .vp-sold-price {
+    font-family: var(--disp);
+    font-size: 3rem; font-weight: 900;
+    color: var(--green);
+    line-height: 1; margin-bottom: 4px;
+  }
+  .vp-sold-price-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 18px; }
+  .vp-sold-team-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; margin-bottom: 20px;
+  }
+  .vp-sold-team-logo {
+    width: 42px; height: 42px;
+    border-radius: 10px; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--disp); font-size: .8rem; font-weight: 800;
+    color: #fff;
+  }
+  .vp-sold-team-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .vp-dismiss-btn {
+    width: 100%; padding: 13px;
+    border-radius: 12px;
     background: var(--bg3);
     border: 1px solid var(--border2);
     color: var(--text);
-    font-family: var(--font-body);
-    font-size: 14px;
+    font-family: var(--body);
+    font-size: 14px; font-weight: 600;
     cursor: pointer;
     transition: background .15s;
   }
-  .vp-dismiss:hover { background: #1e2d42; }
+  .vp-dismiss-btn:hover { background: var(--bg4); }
 
-  /* ── Scrollable list ── */
-  .vp-scroll { max-height: 360px; overflow-y: auto; }
-  .vp-scroll::-webkit-scrollbar { width: 4px; }
-  .vp-scroll::-webkit-scrollbar-track { background: transparent; }
+  /* RESPONSIVE */
+  @media (max-width: 860px) {
+    .vp-main { grid-template-columns: 1fr; }
+    .vp-right { border-top: 1px solid var(--border); max-height: 340px; }
+    .vp-center { border-right: none; }
+    .vp-teams { flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 10px; }
+    .vp-team-card { min-width: 200px; flex-shrink: 0; }
+    .vp-history { max-height: 140px; }
+  }
+
+  @media (max-width: 520px) {
+    .vp-header { padding: 8px 12px; }
+    .vp-event-name { font-size: 1rem; }
+    .vp-bid-section { padding: 12px 14px 14px; }
+    .vp-strip-val { font-size: 1.1rem; }
+    .vp-player-name-big { font-size: 1.8rem; }
+    .vp-current-bid-amount { font-size: 2.2rem; }
+    .vp-img-overlay { padding: 14px 16px; }
+    .vp-sold-modal { border-radius: 18px; }
+    .vp-sold-price { font-size: 2.2rem; }
+  }
+
+  /* PROJECTOR MODE (large screens) */
+  @media (min-width: 1280px) {
+    .vp-main { grid-template-columns: 1fr 380px; }
+    .vp-player-name-big { font-size: 5.5rem; }
+    .vp-current-bid-amount { font-size: 5rem; }
+    .vp-bid-section { padding: 24px 32px 26px; }
+    .vp-bid-count-num { font-size: 3.5rem; }
+    .vp-strip-val { font-size: 2rem; }
+    .vp-strip-label { font-size: 12px; }
+  }
+
+  @media (min-width: 1600px) {
+    .vp-main { grid-template-columns: 1fr 440px; }
+    .vp-player-name-big { font-size: 7rem; }
+    .vp-current-bid-amount { font-size: 6rem; }
+    .vp-bid-section { padding: 28px 40px 30px; }
+    .vp-event-name { font-size: 1.6rem; }
+    .vp-stat-chip-val { font-size: 2rem; }
+    .vp-stat-chip-label { font-size: 12px; }
+  }
+
+  /* Scrollbar utility */
+  .vp-scroll { overflow-y: auto; }
+  .vp-scroll::-webkit-scrollbar { width: 3px; }
   .vp-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 
-  .vp-footer { text-align: center; padding: 18px 0 28px; font-size: 11px; color: var(--text3); }
+  /* Tabs on right panel */
+  .vp-tabs {
+    display: flex;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .vp-tab {
+    flex: 1; padding: 8px 4px;
+    text-align: center;
+    font-size: 11px; font-weight: 600;
+    color: var(--text3);
+    cursor: pointer;
+    border-right: 1px solid var(--border);
+    transition: color .15s, background .15s;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+  }
+  .vp-tab:last-child { border-right: none; }
+  .vp-tab.active { color: var(--text); background: var(--bg2); }
+  .vp-tab:hover:not(.active) { color: var(--text2); }
+
+  .vp-all-players { overflow-y: auto; flex: 1; }
+  .vp-all-players::-webkit-scrollbar { width: 3px; }
+  .vp-all-players::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .vp-prow {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .vp-prow:last-child { border-bottom: none; }
+  .vp-prow-av {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--bg4);
+    overflow: hidden; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+  }
+  .vp-prow-av img { width: 100%; height: 100%; object-fit: cover; }
+  .vp-prow-name { font-size: 12px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vp-prow-role { font-size: 10px; color: var(--text3); }
+  .vp-status-pill {
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-size: 10px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .vp-s-sold { background: rgba(22,217,117,.1); color: var(--green); }
+  .vp-s-unsold { background: rgba(240,74,74,.1); color: var(--red); }
+  .vp-s-available { background: rgba(245,166,35,.1); color: var(--amber); }
+
+  .vp-footer {
+    text-align: center;
+    padding: 8px;
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: .04em;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
 `;
 
 function injectStyles() {
-  if (document.getElementById('vp-styles')) return;
+  if (document.getElementById('vp-v2-styles')) return;
   const s = document.createElement('style');
-  s.id = 'vp-styles';
+  s.id = 'vp-v2-styles';
   s.textContent = GLOBAL_CSS;
   document.head.appendChild(s);
 }
 
 function initials(name = '') {
-  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  return name.split(' ').map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase();
 }
 
 export default function ViewerPage({ token }) {
-  const [data, setData] = useState(null);
-  const [error, setError] = useState(null);
+  const [data, setData]           = useState(null);
+  const [error, setError]         = useState(null);
+  const [loading, setLoading]     = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [activeTab, setActiveTab] = useState('live');
-  const [loading, setLoading] = useState(true);
   const [soldPopup, setSoldPopup] = useState(null);
+  const [activeTab, setActiveTab] = useState('teams');
   const prevSessionRef = useRef(null);
-  const intervalRef = useRef(null);
+  const intervalRef    = useRef(null);
 
   useEffect(() => { injectStyles(); }, []);
 
   const fetchData = async () => {
     try {
       const d = await api.getEventLive(token);
-
-      // Detect sold transition
       const prev = prevSessionRef.current;
       const curr = d.currentSession;
       if (prev && prev.status !== 'Sold' && curr?.status === 'Sold' && curr?.player) {
         setSoldPopup({
           player: curr.player,
-          price: curr.currentBid,
-          team: curr.currentBidTeam,
+          price:  curr.currentBid,
+          team:   curr.currentBidTeam,
           teamName: curr.currentBidTeamName,
         });
       }
       prevSessionRef.current = curr;
-
       setData(d);
       setLastUpdated(new Date());
       setError(null);
@@ -646,216 +721,205 @@ export default function ViewerPage({ token }) {
   }, [token]);
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#080c14', color: '#94a3b8' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#06090f', color: '#7a90b8', fontFamily: 'Barlow, sans-serif' }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: '3rem', marginBottom: 10 }}>🏏</div>
-        <div>Loading auction data...</div>
+        <div>Loading auction...</div>
       </div>
     </div>
   );
 
   if (error) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#080c14', color: '#94a3b8', padding: 24 }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#06090f', color: '#7a90b8', padding: 24, fontFamily: 'Barlow, sans-serif' }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: '3rem', marginBottom: 10 }}>❌</div>
-        <h2 style={{ color: '#ef4444', marginBottom: 8, fontFamily: 'Bebas Neue, sans-serif', fontSize: '1.8rem' }}>Auction Not Found</h2>
+        <h2 style={{ color: '#f04a4a', marginBottom: 8, fontFamily: 'Barlow Condensed, sans-serif', fontSize: '2rem', letterSpacing: '.05em' }}>Auction Not Found</h2>
         <p>Token <strong style={{ letterSpacing: 2 }}>{token}</strong> is invalid or expired.</p>
-        <p style={{ marginTop: 8, fontSize: '13px' }}>Check the link and try again.</p>
       </div>
     </div>
   );
 
   const { event, teams, players, currentSession, history, stats } = data;
-  const isLive = !!currentSession;
-  const roleColor = currentSession?.player ? (ROLE_COLORS[currentSession.player.role] || '#f59e0b') : '#f59e0b';
-  const soldPlayers = players.filter(p => p.status === 'Sold');
-  const unsoldPlayers = players.filter(p => p.status === 'Unsold');
+  const isLive = !!currentSession && currentSession.status !== 'Sold';
+  const roleColor = currentSession?.player ? (ROLE_COLORS[currentSession.player.role] || '#f5a623') : '#f5a623';
+
+  const soldPlayers      = players.filter(p => p.status === 'Sold');
+  const unsoldPlayers    = players.filter(p => p.status === 'Unsold');
   const availablePlayers = players.filter(p => p.status === 'Available');
 
   return (
-    <div className="vp-page">
+    <div className="vp" style={{ height: '100vh' }}>
 
-      {/* ─── SOLD POPUP ────────────────────────────────────── */}
+      {/* ── SOLD POPUP ── */}
       {soldPopup && (
-        <div className="vp-overlay" onClick={() => setSoldPopup(null)}>
-          <div className="vp-modal" onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: '2.4rem', marginBottom: 14 }}>🏆</div>
-            <div className="vp-sold-tag">
-              <span className="vp-live-dot" />
-              Sold!
+        <div className="vp-sold-overlay" onClick={() => setSoldPopup(null)}>
+          <div className="vp-sold-modal" onClick={e => e.stopPropagation()}>
+            <div className="vp-sold-img-zone">
+              {soldPopup.player.imageUrl
+                ? <img src={soldPopup.player.imageUrl} alt={soldPopup.player.name} />
+                : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Barlow Condensed, sans-serif', fontSize: '5rem', fontWeight: 900, color: 'rgba(255,255,255,0.08)' }}>
+                    {initials(soldPopup.player.name)}
+                  </div>
+              }
+              <div className="vp-sold-img-grad" />
+              <div className="vp-sold-img-name">{soldPopup.player.name}</div>
             </div>
-            <div className="vp-sold-name">{soldPopup.player.name}</div>
-            <div className="vp-sold-role">{soldPopup.player.role} · Age {soldPopup.player.age}</div>
-            <div className="vp-sold-price-box">
-              <div className="vp-bid-label">Final price</div>
+            <div className="vp-sold-body">
+              <div className="vp-sold-badge">
+                <span className="vp-live-dot" style={{ background: '#16d975' }} />
+                Sold!
+              </div>
               <div className="vp-sold-price">{formatCurrency(soldPopup.price)}</div>
-            </div>
-            <div style={{ fontSize: 11, color: '#4b5e78', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.07em' }}>Acquired by</div>
-            <div className="vp-sold-team-row">
-              <div className="vp-sold-tlogo" style={{ background: soldPopup.team?.color || '#1e293b' }}>
-                {soldPopup.team?.logo
-                  ? <img src={soldPopup.team.logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />
-                  : <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '0.8rem', color: '#fff' }}>{soldPopup.team?.shortName}</span>
-                }
+              <div className="vp-sold-price-label">Final Price</div>
+              <div className="vp-sold-team-row">
+                <div className="vp-sold-team-logo" style={{ background: soldPopup.team?.color || '#172038' }}>
+                  {soldPopup.team?.logo
+                    ? <img src={soldPopup.team.logo} alt="" />
+                    : <span style={{ fontFamily: 'Barlow Condensed, sans-serif' }}>{soldPopup.team?.shortName}</span>
+                  }
+                </div>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontWeight: 700, fontSize: '1rem' }}>{soldPopup.teamName}</div>
+                  <div style={{ fontSize: 12, color: '#3a4f6e' }}>Remaining: {formatCurrency(soldPopup.team?.remainingBudget)}</div>
+                </div>
               </div>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 600, fontSize: '1rem' }}>{soldPopup.teamName}</div>
-                <div style={{ fontSize: 11, color: '#4b5e78' }}>Budget remaining: {formatCurrency(soldPopup.team?.remainingBudget)}</div>
-              </div>
+              <button className="vp-dismiss-btn" onClick={() => setSoldPopup(null)}>Continue Auction</button>
             </div>
-            <button className="vp-dismiss" onClick={() => setSoldPopup(null)}>Continue auction</button>
           </div>
         </div>
       )}
 
-      {/* ─── BANNER ─────────────────────────────────────────── */}
-      <div className="vp-banner">
-        {event.bannerImage || event.logo ? (
-          <>
-            <img
-              src={event.bannerImage || event.logo}
-              alt={event.name}
-              className="vp-banner-img"
-            />
-            <div className="vp-banner-overlay" />
-          </>
-        ) : (
-          <>
-            <div className="vp-banner-noimgbg" />
-            <div className="vp-banner-noimgpattern" />
-          </>
-        )}
-        <div className="vp-banner-content">
-          <div className="vp-banner-top">
-            {isLive
-              ? <div className="vp-live-badge"><span className="vp-live-dot" />{currentSession.status === 'Paused' ? 'Paused' : 'Live'}</div>
-              : <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '.08em' }}>Not live</div>
-            }
-            <div className="vp-updated">
-              Updated {lastUpdated?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </div>
+      {/* ── HEADER ── */}
+      <div className="vp-header">
+        <div className="vp-header-left">
+          {event.logo
+            ? <img src={event.logo} alt={event.name} className="vp-event-logo" />
+            : <div className="vp-event-logo-fb">🏏</div>
+          }
+          <div>
+            <div className="vp-event-name">{event.name}</div>
+            {event.season && <div className="vp-event-season">Season {event.season}</div>}
           </div>
-
-          <div className="vp-banner-event">
-            {event.logo && !event.bannerImage && (
-              <img src={event.logo} alt={event.name} className="vp-banner-logo" />
-            )}
-            {!event.logo && <div className="vp-banner-logo-fallback">🏏</div>}
-            <div>
-              <div className="vp-banner-name">{event.name}</div>
-              {event.season && <div className="vp-banner-season">Season {event.season}</div>}
-            </div>
-          </div>
-
-          <div className="vp-banner-stats">
-            {[
-              { label: 'Sold', value: stats.sold, color: '#f59e0b' },
-              { label: 'Unsold', value: stats.unsold, color: '#f87171' },
-              { label: 'Remaining', value: stats.available, color: 'rgba(255,255,255,0.65)' },
-              { label: 'Total', value: stats.total, color: 'rgba(255,255,255,0.35)' },
-            ].map(s => (
-              <div key={s.label} className="vp-bstat">
-                <div className="vp-bstat-val" style={{ color: s.color }}>{s.value}</div>
-                <div className="vp-bstat-label">{s.label}</div>
-              </div>
-            ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {isLive
+            ? <div className="vp-live-pill"><span className="vp-live-dot" />{currentSession?.status === 'Paused' ? 'Paused' : 'Live'}</div>
+            : <div style={{ fontSize: 11, color: '#3a4f6e', textTransform: 'uppercase', letterSpacing: '.08em' }}>Not live</div>
+          }
+          <div className="vp-updated">
+            {lastUpdated?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </div>
         </div>
       </div>
 
-      {/* ─── SUMMARY PILLS ──────────────────────────────────── */}
-      <div className="vp-summary">
+      {/* ── STAT STRIP ── */}
+      <div className="vp-strip">
         {[
-          { label: 'Sold', value: stats.sold, color: '#22c55e' },
-          { label: 'Unsold', value: stats.unsold, color: '#ef4444' },
-          { label: 'Available', value: stats.available, color: '#f59e0b' },
-          { label: 'Total', value: stats.total, color: '#94a3b8' },
+          { label: 'Sold',      value: stats.sold,      color: '#16d975' },
+          { label: 'Unsold',    value: stats.unsold,    color: '#f04a4a' },
+          { label: 'Available', value: stats.available, color: '#f5a623' },
+          { label: 'Total',     value: stats.total,     color: '#7a90b8' },
         ].map(s => (
-          <div key={s.label} className="vp-sc">
-            <div className="vp-sc-val" style={{ color: s.color }}>{s.value}</div>
-            <div className="vp-sc-label">{s.label}</div>
+          <div key={s.label} className="vp-strip-item">
+            <div className="vp-strip-val" style={{ color: s.color }}>{s.value}</div>
+            <div className="vp-strip-label">{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* ─── MAIN CONTENT ───────────────────────────────────── */}
-      <div className="vp-content">
+      {/* ── MAIN ── */}
+      <div className="vp-main" style={{ flex: 1, minHeight: 0 }}>
 
-        {/* LEFT */}
-        <div>
-          <div className="vp-section-label">🔥 Current player on auction</div>
-
+        {/* CENTER */}
+        <div className="vp-center">
           {isLive ? (
-            <div className="vp-stage">
-              <div className="vp-stage-header">
-                <div className="vp-live-badge" style={{ fontSize: 10 }}>
-                  <span className="vp-live-dot" />
-                  {currentSession.status === 'Paused' ? 'Paused' : 'Bidding live'}
-                </div>
-                <div style={{ fontSize: 12, color: '#4b5e78' }}>{currentSession.bids.length} bid{currentSession.bids.length !== 1 ? 's' : ''} placed</div>
-              </div>
-              <div className="vp-stage-body">
+            <div className="vp-player-card">
+
+              {/* BIG IMAGE */}
+              <div className="vp-img-zone">
                 {currentSession.player?.imageUrl
-                  ? <img src={currentSession.player.imageUrl} alt={currentSession.player.name}
-                      className="vp-player-avatar"
-                      style={{ border: `3px solid ${roleColor}`, boxShadow: `0 0 24px ${roleColor}40` }} />
-                  : <div className="vp-player-avatar-fallback"
-                      style={{ border: `3px solid ${roleColor}`, background: `${roleColor}14`, color: roleColor }}>
+                  ? <img src={currentSession.player.imageUrl} alt={currentSession.player.name} />
+                  : <div className="vp-img-fallback" style={{ color: roleColor }}>
                       {initials(currentSession.player?.name)}
                     </div>
                 }
-
-                <div className="vp-role-badge" style={{ background: `${roleColor}14`, color: roleColor }}>
-                  {currentSession.player?.role}
+                {/* Subtle color tint from role */}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: `radial-gradient(ellipse at 70% 50%, ${roleColor}18 0%, transparent 70%)`,
+                  pointerEvents: 'none',
+                }} />
+                <div className="vp-img-grad" />
+                <div className="vp-img-overlay">
+                  <div className="vp-role-pill" style={{ background: `${roleColor}20`, color: roleColor }}>
+                    {currentSession.player?.role}
+                  </div>
+                  <div className="vp-player-name-big">{currentSession.player?.name}</div>
+                  <div className="vp-player-sub">
+                    {currentSession.player?.battingStyle}
+                    {currentSession.player?.age ? ` · Age ${currentSession.player.age}` : ''}
+                  </div>
                 </div>
-                <div className="vp-player-name">{currentSession.player?.name}</div>
-                <div className="vp-player-meta">{currentSession.player?.battingStyle} · Age {currentSession.player?.age}</div>
+              </div>
 
+              {/* BID SECTION */}
+              <div className="vp-bid-section">
+                <div className="vp-bid-main">
+                  <div>
+                    <div className="vp-current-bid-label">Current Bid</div>
+                    <div className="vp-current-bid-amount" style={{ color: currentSession.currentBidTeam ? '#16d975' : '#3a4f6e' }}>
+                      {formatCurrency(currentSession.currentBid)}
+                    </div>
+                    {currentSession.currentBidTeamName ? (
+                      <div className="vp-bid-team-info">
+                        <div className="vp-team-dot" style={{ background: currentSession.currentBidTeam?.color || '#16d975' }} />
+                        <span className="vp-bid-team-name">{currentSession.currentBidTeamName}</span>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 13, color: '#3a4f6e', marginTop: 6 }}>Base price · Awaiting bids</div>
+                    )}
+                  </div>
+                  <div className="vp-bid-count-box">
+                    <div className="vp-bid-count-num">{currentSession.bids.length}</div>
+                    <div className="vp-bid-count-label">Bids</div>
+                  </div>
+                </div>
+
+                {/* Stats */}
                 {currentSession.player?.stats && (
-                  <div className="vp-player-stats">
+                  <div className="vp-stats-row">
                     {currentSession.player.stats.runs > 0 && (
-                      <div className="vp-pstat">
-                        <div className="vp-pstat-val">{currentSession.player.stats.runs}</div>
-                        <div className="vp-pstat-label">Runs</div>
+                      <div className="vp-stat-chip">
+                        <div className="vp-stat-chip-val" style={{ color: '#38d9f5' }}>{currentSession.player.stats.runs}</div>
+                        <div className="vp-stat-chip-label">Runs</div>
                       </div>
                     )}
                     {currentSession.player.stats.wickets > 0 && (
-                      <div className="vp-pstat">
-                        <div className="vp-pstat-val">{currentSession.player.stats.wickets}</div>
-                        <div className="vp-pstat-label">Wickets</div>
+                      <div className="vp-stat-chip">
+                        <div className="vp-stat-chip-val" style={{ color: '#f04a4a' }}>{currentSession.player.stats.wickets}</div>
+                        <div className="vp-stat-chip-label">Wickets</div>
                       </div>
                     )}
                     {currentSession.player.stats.average > 0 && (
-                      <div className="vp-pstat">
-                        <div className="vp-pstat-val">{currentSession.player.stats.average}</div>
-                        <div className="vp-pstat-label">Avg</div>
+                      <div className="vp-stat-chip">
+                        <div className="vp-stat-chip-val" style={{ color: '#ffe066' }}>{currentSession.player.stats.average}</div>
+                        <div className="vp-stat-chip-label">Avg</div>
+                      </div>
+                    )}
+                    {currentSession.player.stats.strikeRate > 0 && (
+                      <div className="vp-stat-chip">
+                        <div className="vp-stat-chip-val" style={{ color: '#f5a623' }}>{currentSession.player.stats.strikeRate}</div>
+                        <div className="vp-stat-chip-label">SR</div>
                       </div>
                     )}
                   </div>
                 )}
 
-                <div className="vp-bid-box">
-                  <div className="vp-bid-label">Current bid</div>
-                  <div className="vp-bid-amount" style={{ color: currentSession.currentBidTeam ? '#22c55e' : '#4b5e78' }}>
-                    {formatCurrency(currentSession.currentBid)}
-                  </div>
-                  {currentSession.currentBidTeamName ? (
-                    <div className="vp-bid-team-row">
-                      {currentSession.currentBidTeam?.logo
-                        ? <img src={currentSession.currentBidTeam.logo} alt="" style={{ width: 22, height: 22, borderRadius: 5, objectFit: 'cover' }} />
-                        : <div style={{ width: 10, height: 10, borderRadius: '50%', background: currentSession.currentBidTeam?.color, flexShrink: 0 }} />
-                      }
-                      <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{currentSession.currentBidTeamName}</span>
-                    </div>
-                  ) : (
-                    <div style={{ color: '#4b5e78', marginTop: 6, fontSize: 13 }}>Base price · Awaiting bids</div>
-                  )}
-                </div>
-
+                {/* Bid history chips */}
                 {currentSession.bids.length > 0 && (
-                  <div className="vp-bid-history">
+                  <div className="vp-history-chips">
                     {[...currentSession.bids].reverse().slice(0, 6).map((b, i) => (
-                      <div key={i} className={`vp-bid-chip${i === 0 ? ' vp-bid-chip-top' : ''}`}>
+                      <div key={i} className={`vp-hchip${i === 0 ? ' vp-hchip-top' : ''}`}>
                         {b.teamName} · {formatCurrency(b.amount)}
                       </div>
                     ))}
@@ -865,166 +929,151 @@ export default function ViewerPage({ token }) {
             </div>
           ) : (
             <div className="vp-idle">
-              <div style={{ fontSize: '2.4rem', marginBottom: 10 }}>⏸</div>
-              <h2 style={{ fontSize: '1.3rem', color: '#64748b', marginBottom: 6, fontFamily: 'Bebas Neue, sans-serif', letterSpacing: '.03em' }}>No active bid</h2>
-              <p style={{ color: '#4b5e78', fontSize: 13 }}>The auctioneer will start the next player shortly...</p>
+              <div className="vp-idle-icon">⏸</div>
+              <div className="vp-idle-title">Auction Paused</div>
+              <div className="vp-idle-sub">The auctioneer will start the next player shortly...</div>
               {history.length > 0 && (
-                <div style={{ marginTop: 16, padding: '12px 18px', background: '#0e1623', borderRadius: 10, display: 'inline-block', border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <div style={{ fontSize: 10, color: '#4b5e78', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.07em' }}>Last sold</div>
-                  <div style={{ fontWeight: 600 }}>{history[0]?.player?.name}</div>
-                  <div style={{ color: '#22c55e', fontWeight: 600, fontSize: 13 }}>
+                <div className="vp-idle-last">
+                  <div className="vp-idle-last-label">Last sold</div>
+                  <div className="vp-idle-last-name">{history[0]?.player?.name}</div>
+                  <div className="vp-idle-last-price">
                     {formatCurrency(history[0]?.currentBid)} → {history[0]?.currentBidTeam?.shortName}
                   </div>
                 </div>
               )}
             </div>
           )}
-
-          {/* Tabs */}
-          <div className="vp-card">
-            <div className="vp-tabs">
-              {[['live', '⚡ Recent'], ['players', '👤 All'], ['unsold', '❌ Unsold']].map(([id, label]) => (
-                <div key={id} className={`vp-tab${activeTab === id ? ' active' : ''}`} onClick={() => setActiveTab(id)}>
-                  {label}
-                </div>
-              ))}
-            </div>
-
-            {activeTab === 'live' && (
-              history.length === 0
-                ? <div className="vp-empty">📋 No sales yet</div>
-                : history.slice(0, 15).map(h => (
-                  <div key={h._id} className="vp-player-row">
-                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: h.status === 'Sold' ? '#22c55e' : '#ef4444', flexShrink: 0 }} />
-                    <div className="vp-avatar-sm">
-                      {h.player?.imageUrl ? <img src={h.player.imageUrl} alt="" /> : initials(h.player?.name)}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="vp-pname" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.player?.name}</div>
-                      <div className="vp-prole">{h.player?.role}</div>
-                    </div>
-                    {h.status === 'Sold'
-                      ? <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div style={{ fontWeight: 700, color: '#22c55e', fontSize: 13 }}>{formatCurrency(h.currentBid)}</div>
-                          <div style={{ fontSize: 11, color: '#4b5e78' }}>→ {h.currentBidTeam?.shortName}</div>
-                        </div>
-                      : <span className="vp-badge vp-badge-unsold">Unsold</span>
-                    }
-                  </div>
-                ))
-            )}
-
-            {activeTab === 'players' && (
-              <>
-                <div style={{ display: 'flex', gap: 5, marginBottom: 10, flexWrap: 'wrap' }}>
-                  <span className="vp-pill" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>✅ {soldPlayers.length} Sold</span>
-                  <span className="vp-pill" style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b' }}>⏳ {availablePlayers.length} Available</span>
-                  <span className="vp-pill" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>❌ {unsoldPlayers.length} Unsold</span>
-                </div>
-                <div className="vp-scroll">
-                  {players.map(p => {
-                    const rc = ROLE_COLORS[p.role] || '#64748b';
-                    return (
-                      <div key={p._id} className="vp-player-row">
-                        <div className="vp-avatar-sm" style={{ background: `${rc}14`, color: rc }}>
-                          {p.imageUrl ? <img src={p.imageUrl} alt={p.name} /> : initials(p.name)}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div className="vp-pname" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-                          <div className="vp-prole">{p.role}</div>
-                        </div>
-                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          {p.status === 'Sold'
-                            ? <>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>{formatCurrency(p.soldPrice)}</div>
-                                <div style={{ fontSize: 11, color: '#4b5e78' }}>{p.team?.shortName}</div>
-                              </>
-                            : <span className={`vp-badge vp-badge-${p.status.toLowerCase()}`}>{p.status}</span>
-                          }
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-
-            {activeTab === 'unsold' && (
-              unsoldPlayers.length === 0
-                ? <div className="vp-empty">✅ No unsold players yet</div>
-                : unsoldPlayers.map(p => (
-                  <div key={p._id} className="vp-player-row">
-                    <div className="vp-avatar-sm">
-                      {p.imageUrl ? <img src={p.imageUrl} alt={p.name} /> : initials(p.name)}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="vp-pname" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-                      <div className="vp-prole">{p.role} · Base {formatCurrency(p.basePrice)}</div>
-                    </div>
-                    <span className="vp-badge vp-badge-unsold">Unsold</span>
-                  </div>
-                ))
-            )}
-          </div>
         </div>
 
-        {/* RIGHT — Teams */}
+        {/* RIGHT PANEL */}
         <div className="vp-right">
-          <div className="vp-section-label">🛡️ Teams & budgets</div>
-          <div className="vp-teams-grid">
-            {teams.map(t => {
-              const spent = t.budget - t.remainingBudget;
-              const pct = Math.min(100, Math.round((spent / t.budget) * 100));
-              return (
-                <div key={t._id} className="vp-team-card">
-                  <div className="vp-team-header">
-                    <div className="vp-team-logo" style={{ background: t.logo ? 'transparent' : (t.color || '#1e293b') }}>
-                      {t.logo ? <img src={t.logo} alt={t.name} /> : t.shortName}
+          {/* Tabs */}
+          <div className="vp-tabs">
+            {[
+              ['teams',   '🛡 Teams'],
+              ['recent',  '⚡ Recent'],
+              ['all',     '👤 All'],
+            ].map(([id, label]) => (
+              <div
+                key={id}
+                className={`vp-tab${activeTab === id ? ' active' : ''}`}
+                onClick={() => setActiveTab(id)}
+              >
+                {label}
+              </div>
+            ))}
+          </div>
+
+          {/* TEAMS TAB */}
+          {activeTab === 'teams' && (
+            <div className="vp-teams">
+              {teams.map(t => {
+                const spent = t.budget - t.remainingBudget;
+                const pct   = Math.min(100, Math.round((spent / t.budget) * 100));
+                return (
+                  <div key={t._id} className="vp-team-card">
+                    <div className="vp-team-card-header">
+                      <div className="vp-team-badge" style={{ background: t.logo ? 'transparent' : (t.color || '#172038') }}>
+                        {t.logo ? <img src={t.logo} alt={t.name} /> : t.shortName}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="vp-team-name-sm" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</div>
+                        <div style={{ fontSize: 10, color: '#3a4f6e' }}>{t.players.length} players</div>
+                      </div>
+                      <div className="vp-team-budget-sm" style={{ color: pct > 80 ? '#f5a623' : '#16d975' }}>
+                        {formatCurrency(t.remainingBudget)}
+                      </div>
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</div>
-                      <div style={{ fontSize: 11, color: '#4b5e78' }}>{t.players.length} players · {formatCurrency(t.remainingBudget)} left</div>
-                    </div>
-                    <div style={{ fontWeight: 700, color: pct > 80 ? '#f59e0b' : '#22c55e', fontSize: 13, flexShrink: 0 }}>
-                      {formatCurrency(t.remainingBudget)}
-                    </div>
-                  </div>
-                  <div style={{ padding: '10px 13px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#4b5e78', marginBottom: 0 }}>
-                      <span>Spent {formatCurrency(spent)}</span>
-                      <span>{pct}%</span>
-                    </div>
-                    <div className="vp-budget-bar">
+                    <div className="vp-budget-track">
                       <div className="vp-budget-fill" style={{ width: `${pct}%`, background: t.color || '#3b82f6' }} />
                     </div>
                     {t.players.length > 0 && (
-                      <div className="vp-player-chips">
-                        {t.players.slice(0, 5).map(p => (
-                          <div key={p._id} className="vp-chip">
-                            {p.imageUrl
-                              ? <img src={p.imageUrl} alt={p.name} style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover' }} />
-                              : <div style={{ width: 18, height: 18, borderRadius: '50%', background: `${ROLE_COLORS[p.role] || '#64748b'}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 600, color: ROLE_COLORS[p.role] || '#64748b', flexShrink: 0 }}>
-                                  {initials(p.name)}
-                                </div>
-                            }
-                            <span>{p.name.split(' ')[0]}</span>
+                      <div className="vp-team-players">
+                        {t.players.slice(0, 6).map(p => (
+                          <div key={p._id} className="vp-player-mini">
+                            <div className="vp-mini-dot" style={{ background: ROLE_COLORS[p.role] || '#64748b' }} />
+                            {p.name.split(' ')[0]}
                           </div>
                         ))}
-                        {t.players.length > 5 && (
-                          <div style={{ padding: '3px 7px', borderRadius: 6, background: '#0e1623', fontSize: 11, color: '#4b5e78' }}>+{t.players.length - 5}</div>
+                        {t.players.length > 6 && (
+                          <div style={{ padding: '2px 7px', borderRadius: 6, background: '#06090f', fontSize: 11, color: '#3a4f6e' }}>
+                            +{t.players.length - 6}
+                          </div>
                         )}
                       </div>
                     )}
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* RECENT TAB */}
+          {activeTab === 'recent' && (
+            <div className="vp-all-players">
+              {history.length === 0
+                ? <div style={{ textAlign: 'center', padding: '28px 0', color: '#3a4f6e', fontSize: 13 }}>No sales yet</div>
+                : history.slice(0, 20).map(h => (
+                  <div key={h._id} className="vp-history-row">
+                    <div className="vp-history-status" style={{ background: h.status === 'Sold' ? '#16d975' : '#f04a4a' }} />
+                    <div className="vp-prow-av">
+                      {h.player?.imageUrl ? <img src={h.player.imageUrl} alt="" /> : initials(h.player?.name)}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="vp-history-name">{h.player?.name}</div>
+                      <div className="vp-history-role">{h.player?.role}</div>
+                    </div>
+                    {h.status === 'Sold'
+                      ? <div style={{ textAlign: 'right' }}>
+                          <div className="vp-history-price">{formatCurrency(h.currentBid)}</div>
+                          <div className="vp-history-team">{h.currentBidTeam?.shortName}</div>
+                        </div>
+                      : <span className="vp-status-pill vp-s-unsold">Unsold</span>
+                    }
+                  </div>
+                ))
+              }
+            </div>
+          )}
+
+          {/* ALL PLAYERS TAB */}
+          {activeTab === 'all' && (
+            <div className="vp-all-players">
+              <div style={{ display: 'flex', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+                <span className="vp-status-pill vp-s-sold">✅ {soldPlayers.length} Sold</span>
+                <span className="vp-status-pill vp-s-available">⏳ {availablePlayers.length} Avail</span>
+                <span className="vp-status-pill vp-s-unsold">❌ {unsoldPlayers.length} Unsold</span>
+              </div>
+              {players.map(p => {
+                const rc = ROLE_COLORS[p.role] || '#64748b';
+                return (
+                  <div key={p._id} className="vp-prow">
+                    <div className="vp-prow-av" style={{ background: `${rc}18`, color: rc }}>
+                      {p.imageUrl ? <img src={p.imageUrl} alt={p.name} /> : initials(p.name)}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="vp-prow-name">{p.name}</div>
+                      <div className="vp-prow-role">{p.role}</div>
+                    </div>
+                    {p.status === 'Sold'
+                      ? <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#16d975' }}>{formatCurrency(p.soldPrice)}</div>
+                          <div style={{ fontSize: 10, color: '#3a4f6e' }}>{p.team?.shortName}</div>
+                        </div>
+                      : <span className={`vp-status-pill vp-s-${p.status.toLowerCase()}`}>{p.status}</span>
+                    }
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="vp-footer">🏏 CricAuction · Read-only viewer · Auto-refreshes every 4 seconds</div>
-      <div className="vp-footer">मा. श्री. पवन पाटणे यांचा सहकार्याने ❤️ </div>
+      {/* FOOTER */}
+      <div className="vp-footer">
+        🏏 CricAuction · Read-only viewer · Refreshes every 4s &nbsp;·&nbsp; मा. श्री. पवन पाटणे यांचा सहकार्याने ❤️
+      </div>
     </div>
   );
 }
