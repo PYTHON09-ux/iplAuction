@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { api, formatCurrency, ROLE_COLORS } from '../utils/api';
+import ChatPanel from './ChatPanel';
 
 /* ── confetti helper ── */
 function spawnConfetti(container) {
@@ -577,6 +578,7 @@ export default function ViewerPage({ token }) {
   const [popup, setPopup]             = useState(null);
   const [activeTab, setActiveTab]     = useState('teams');
   const [fullscreen, setFullscreen]   = useState(false);
+  const [chatOpen, setChatOpen] = useState(true);
 
   /* Refs for reliable popup detection */
   const prevStatusRef    = useRef(null);  // previous status string
@@ -997,7 +999,7 @@ export default function ViewerPage({ token }) {
         {!fullscreen && (
           <div className="vp-right">
             <div className="vp-tabs">
-              {[['teams','Teams'],['recent','Recent'],['all','All']].map(([id,label]) => (
+              {[['teams','Teams'],['recent','Recent'],['all','All'],['chat','Chat']].map(([id,label]) => (
                 <div key={id} className={`vp-tab${activeTab===id?' active':''}`} onClick={() => setActiveTab(id)}>{label}</div>
               ))}
             </div>
@@ -1105,7 +1107,7 @@ export default function ViewerPage({ token }) {
 
       {!fullscreen && (
         <div className="vp-footer">
-          CricAuction · Read-only viewer · Refreshes every 4s &nbsp;·&nbsp; मा. श्री. पवन पाटणे यांच्या सहकार्याने
+         मा. श्री. पवन पाटणे यांच्या सहकार्याने❤️
         </div>
       )}
     </div>
