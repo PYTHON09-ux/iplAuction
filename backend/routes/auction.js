@@ -69,16 +69,39 @@ router.post('/start', auth, async (req, res) => {
 // POST place bid (admin only)
 router.post('/bid', auth, async (req, res) => {
   try {
-    const { sessionId, teamId, amount } = req.body;
-    const session = await AuctionSession.findById(sessionId);
-    if (!session || session.status !== 'Active') return res.status(400).json({ error: 'No active auction session' });
+    const { sessionId, teamId, amount, defaultBasePrice } = req.body;
+
+    const session = await AuctionSession.findById(sessionId).populate('auctionEvent');
+    if (!session || session.status !== 'Active')
+      return res.status(400).json({ error: 'No active auction session' });
+
     const team = await Team.findById(teamId);
     if (!team) return res.status(404).json({ error: 'Team not found' });
-    if (amount <= session.currentBid) return res.status(400).json({ error: `Bid must be higher than ₹${session.currentBid.toLocaleString()}` });
-    if (amount > team.remainingBudget) return res.status(400).json({ error: `Insufficient budget. Team has ₹${team.remainingBudget.toLocaleString()} left` });
+
+    if (amount <= session.currentBid)
+      return res.status(400).json({ error: `Bid must be higher than ₹${session.currentBid.toLocaleString()}` });
+
+    // Reserved-budget guard:
+    // After winning this player, team still needs to fill (remainingSlots - 1) more slots.
+    // Each of those slots requires at least defaultBasePrice, so that amount must stay reserved.
+    const currentSlots   = team.maxPlayers - team.players.length;
+    const slotsAfter     = currentSlots - 1;
+    const basePrice      = session.auctionEvent?.defaultBasePrice ?? defaultBasePrice ?? 0;
+    const reservedBudget = slotsAfter * basePrice;
+    const effectiveMax   = team.remainingBudget - reservedBudget;
+
+    if (amount > effectiveMax) {
+      return res.status(400).json({
+        error: `Max bid is ₹${effectiveMax.toLocaleString()}. Must reserve ₹${reservedBudget.toLocaleString()} for ${slotsAfter} remaining slot(s).`
+      });
+    }
+
     session.bids.push({ team: teamId, teamName: team.name, amount });
-    session.currentBid = amount; session.currentBidTeam = teamId; session.currentBidTeamName = team.name;
+    session.currentBid = amount;
+    session.currentBidTeam = teamId;
+    session.currentBidTeamName = team.name;
     await session.save();
+
     const populated = await session.populate(['player', 'currentBidTeam']);
     res.json(populated);
   } catch (err) { res.status(400).json({ error: err.message }); }
