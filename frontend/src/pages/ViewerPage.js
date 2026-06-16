@@ -4,17 +4,17 @@ import ChatPanel from '../components/ChatPanel.jsx';
 
 /* ── confetti helper ── */
 function spawnConfetti(container) {
-  const colors = ['#ffe066','#16d975','#38d9f5','#f5a623','#f04a4a','#c084fc','#fff'];
+  const colors = ['#ffe066', '#16d975', '#38d9f5', '#f5a623', '#f04a4a', '#c084fc', '#fff'];
   for (let i = 0; i < 120; i++) {
     const el = document.createElement('div');
     const color = colors[Math.floor(Math.random() * colors.length)];
-    const size  = 5 + Math.random() * 10;
-    const left  = Math.random() * 100;
+    const size = 5 + Math.random() * 10;
+    const left = Math.random() * 100;
     const delay = Math.random() * 0.8;
-    const dur   = 1.8 + Math.random() * 1.4;
-    const rot   = Math.random() * 720 - 360;
+    const dur = 1.8 + Math.random() * 1.4;
+    const rot = Math.random() * 720 - 360;
     const isRect = Math.random() > 0.5;
-    el.style.cssText = `position:absolute;top:-20px;left:${left}%;width:${isRect?size:size*.45}px;height:${isRect?size*.4:size}px;background:${color};border-radius:${isRect?2:50}%;animation:confettiFall ${dur}s ${delay}s ease-in forwards;transform:rotate(${rot}deg);pointer-events:none;z-index:10;`;
+    el.style.cssText = `position:absolute;top:-20px;left:${left}%;width:${isRect ? size : size * .45}px;height:${isRect ? size * .4 : size}px;background:${color};border-radius:${isRect ? 2 : 50}%;animation:confettiFall ${dur}s ${delay}s ease-in forwards;transform:rotate(${rot}deg);pointer-events:none;z-index:10;`;
     container.appendChild(el);
     setTimeout(() => el.remove(), (dur + delay) * 1000 + 300);
   }
@@ -394,6 +394,40 @@ const CSS = `
     .vp-strip-val{font-size:2.2rem}
     .vp-strip-label{font-size:13px}
   }
+    /* FLOATING CHAT */
+.vp-chat-fab{
+  position:fixed;bottom:24px;right:24px;z-index:7000;
+  width:48px;height:48px;border-radius:50%;
+  background:#16d975;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 20px rgba(22,217,117,0.4);
+  transition:transform .2s,box-shadow .2s;
+}
+.vp-chat-fab:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(22,217,117,0.5)}
+.vp-chat-fab svg{width:22px;height:22px;color:#06090f}
+.vp-chat-badge{
+  position:absolute;top:-4px;right:-4px;
+  width:18px;height:18px;border-radius:50%;
+  background:#f04a4a;border:2px solid #06090f;
+  font-size:10px;font-weight:800;color:#fff;
+  display:flex;align-items:center;justify-content:center;
+}
+.vp-chat-drawer{
+  position:fixed;bottom:84px;right:24px;z-index:7000;
+  width:320px;height:480px;
+  border-radius:16px;overflow:hidden;
+  border:1px solid rgba(255,255,255,0.1);
+  box-shadow:0 20px 60px rgba(0,0,0,0.6);
+  backdrop-filter:blur(12px);
+  background:rgba(12,18,32,0.85);
+  display:flex;flex-direction:column;
+  animation:slideUp .25s ease;
+}
+.vp-chat-drawer.closed{display:none}
+@media(max-width:520px){
+  .vp-chat-drawer{width:calc(100vw - 32px);right:16px;bottom:80px}
+  .vp-chat-fab{bottom:16px;right:16px}
+}
 `;
 
 function injectStyles() {
@@ -411,67 +445,67 @@ function initials(name = '') {
 /* ── SVG ICONS (professional, no emoji) ── */
 const IconExpand = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/>
-    <path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
+    <path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+    <path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" />
   </svg>
 );
 const IconShrink = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/>
-    <path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>
+    <path d="M8 3v3a2 2 0 0 1-2 2H3" /><path d="M21 8h-3a2 2 0 0 1-2-2V3" />
+    <path d="M3 16h3a2 2 0 0 1 2 2v3" /><path d="M16 21v-3a2 2 0 0 1 2-2h3" />
   </svg>
 );
 const IconBat = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="4" y1="20" x2="14" y2="10"/><path d="M14 10 l6 -6 a2 2 0 0 0-3-3 l-6 6"/>
-    <circle cx="6" cy="18" r="2"/>
+    <line x1="4" y1="20" x2="14" y2="10" /><path d="M14 10 l6 -6 a2 2 0 0 0-3-3 l-6 6" />
+    <circle cx="6" cy="18" r="2" />
   </svg>
 );
 const IconClock = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/>
+    <circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 16 14" />
   </svg>
 );
 const IconArrowRight = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+    <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
   </svg>
 );
 const IconCheckCircle = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
   </svg>
 );
 const IconXCircle = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+    <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
   </svg>
 );
 const IconTrophy = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
-    <path d="M4 22h16"/><path d="M10 22v-4.3a5 5 0 0 1-3-4.7V4h10v9a5 5 0 0 1-3 4.7V22"/>
+    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+    <path d="M4 22h16" /><path d="M10 22v-4.3a5 5 0 0 1-3-4.7V4h10v9a5 5 0 0 1-3 4.7V22" />
   </svg>
 );
 const IconCoin = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="9"/><path d="M14.5 9A3 3 0 0 0 9 10v4a3 3 0 0 0 5.5 1"/>
+    <circle cx="12" cy="12" r="9" /><path d="M14.5 9A3 3 0 0 0 9 10v4a3 3 0 0 0 5.5 1" />
   </svg>
 );
 const IconCake = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2 1 2 1"/>
-    <line x1="12" y1="11" x2="12" y2="7"/><path d="M10 7 C10 5 14 5 14 7"/>
+    <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8" /><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2 1 2 1" />
+    <line x1="12" y1="11" x2="12" y2="7" /><path d="M10 7 C10 5 14 5 14 7" />
   </svg>
 );
 const IconFlag = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" y1="22" x2="4" y2="15" />
   </svg>
 );
 const IconTag = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>
+    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" />
   </svg>
 );
 
@@ -486,19 +520,19 @@ function SoldPopup({ popup, onDismiss }) {
       <div className="vp-popup-card vp-popup-card-sold" onClick={e => e.stopPropagation()}>
         <div className="vp-popup-accent-line sold" />
         <div className="vp-popup-img-wrap">
-          {player.imageUrl && <div className="vp-popup-img-bg" style={{ backgroundImage:`url(${player.imageUrl})` }} />}
+          {player.imageUrl && <div className="vp-popup-img-bg" style={{ backgroundImage: `url(${player.imageUrl})` }} />}
           {player.imageUrl
             ? <img src={player.imageUrl} alt={player.name} />
-            : <div className="vp-popup-img-fallback" style={{ color:'#16d975' }}>{initials(player.name)}</div>
+            : <div className="vp-popup-img-fallback" style={{ color: '#16d975' }}>{initials(player.name)}</div>
           }
           <div className="vp-popup-img-grad-sold" />
         </div>
         <div className="vp-popup-body">
           <div className="vp-popup-verdict-sold">
-            <span style={{ width:8,height:8,borderRadius:'50%',background:'#16d975',display:'inline-block',animation:'pulse 1.1s infinite' }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16d975', display: 'inline-block', animation: 'pulse 1.1s infinite' }} />
             <IconTrophy />&nbsp;Sold
           </div>
-          <div className="vp-popup-player-name" style={{ color:'#ffe066' }}>{player.name}</div>
+          <div className="vp-popup-player-name" style={{ color: '#ffe066' }}>{player.name}</div>
           <div className="vp-popup-player-meta">
             {player.role}{player.age ? ` · Age ${player.age}` : ''}{player.battingStyle ? ` · ${player.battingStyle}` : ''}
           </div>
@@ -537,11 +571,11 @@ function UnsoldPopup({ popup, onDismiss }) {
       <div className="vp-popup-unsold-bg" />
       <div className="vp-popup-card vp-popup-card-unsold" onClick={e => e.stopPropagation()}>
         <div className="vp-popup-accent-line unsold" />
-        <div className="vp-popup-img-wrap" style={{ filter:'grayscale(0.7)' }}>
-          {player.imageUrl && <div className="vp-popup-img-bg" style={{ backgroundImage:`url(${player.imageUrl})` }} />}
+        <div className="vp-popup-img-wrap" style={{ filter: 'grayscale(0.7)' }}>
+          {player.imageUrl && <div className="vp-popup-img-bg" style={{ backgroundImage: `url(${player.imageUrl})` }} />}
           {player.imageUrl
-            ? <img src={player.imageUrl} alt={player.name} style={{ opacity:0.65 }} />
-            : <div className="vp-popup-img-fallback" style={{ color:'#f04a4a' }}>{initials(player.name)}</div>
+            ? <img src={player.imageUrl} alt={player.name} style={{ opacity: 0.65 }} />
+            : <div className="vp-popup-img-fallback" style={{ color: '#f04a4a' }}>{initials(player.name)}</div>
           }
           <div className="vp-popup-img-grad-unsold" />
         </div>
@@ -549,7 +583,7 @@ function UnsoldPopup({ popup, onDismiss }) {
           <div className="vp-popup-verdict-unsold">
             <IconXCircle /> Unsold
           </div>
-          <div className="vp-popup-player-name" style={{ color:'#94a3b8' }}>{player.name}</div>
+          <div className="vp-popup-player-name" style={{ color: '#94a3b8' }}>{player.name}</div>
           <div className="vp-popup-player-meta">
             {player.role}{player.age ? ` · Age ${player.age}` : ''}
           </div>
@@ -571,20 +605,21 @@ function UnsoldPopup({ popup, onDismiss }) {
    MAIN COMPONENT
 ══════════════════════ */
 export default function ViewerPage({ token }) {
-  const [data, setData]               = useState(null);
-  const [error, setError]             = useState(null);
-  const [loading, setLoading]         = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [popup, setPopup]             = useState(null);
-  const [activeTab, setActiveTab]     = useState('teams');
-  const [fullscreen, setFullscreen]   = useState(false);
+  const [popup, setPopup] = useState(null);
+  const [activeTab, setActiveTab] = useState('teams');
+  const [fullscreen, setFullscreen] = useState(false);
   const [chatOpen, setChatOpen] = useState(true);
 
   /* Refs for reliable popup detection */
-  const prevStatusRef    = useRef(null);  // previous status string
-  const prevPlayerIdRef  = useRef(null);  // previous player _id
-  const prevSessionRef   = useRef(null);  // full previous session snapshot
-  const shownPopupRef    = useRef(null);  // composite key of last popup shown: "playerId:status"
+  const prevStatusRef = useRef(null);  // previous status string
+  const prevPlayerIdRef = useRef(null);  // previous player _id
+  const prevSessionRef = useRef(null);  // full previous session snapshot
+  const shownPopupRef = useRef(null);  // composite key of last popup shown: "playerId:status"
 
   useEffect(() => { injectStyles(); }, []);
 
@@ -607,7 +642,7 @@ export default function ViewerPage({ token }) {
       */
       if (curr?.player?._id && (curr.status === 'Sold' || curr.status === 'Unsold')) {
         const compositeKey = `${curr.player._id}:${curr.status}`;
-        const prevKey      = `${prevPlayerIdRef.current}:${prevStatusRef.current}`;
+        const prevKey = `${prevPlayerIdRef.current}:${prevStatusRef.current}`;
 
         const isNewTransition = compositeKey !== shownPopupRef.current && compositeKey !== prevKey;
 
@@ -628,9 +663,9 @@ export default function ViewerPage({ token }) {
       }
 
       /* Save previous state */
-      prevStatusRef.current   = curr?.status   ?? null;
+      prevStatusRef.current = curr?.status ?? null;
       prevPlayerIdRef.current = curr?.player?._id ?? null;
-      prevSessionRef.current  = curr;
+      prevSessionRef.current = curr;
 
       setData(d);
       setLastUpdated(new Date());
@@ -649,22 +684,22 @@ export default function ViewerPage({ token }) {
   }, [token]);
 
   if (loading) return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#06090f', color:'#7a90b8', fontFamily:'Barlow Condensed,sans-serif' }}>
-      <div style={{ textAlign:'center' }}>
-        <div style={{ width:64, height:64, borderRadius:'50%', border:'2px solid #172038', borderTopColor:'#16d975', margin:'0 auto 16px', animation:'spin .8s linear infinite' }} />
-        <div style={{ fontSize:'1.4rem', fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase' }}>Loading Auction...</div>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#06090f', color: '#7a90b8', fontFamily: 'Barlow Condensed,sans-serif' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: 64, height: 64, borderRadius: '50%', border: '2px solid #172038', borderTopColor: '#16d975', margin: '0 auto 16px', animation: 'spin .8s linear infinite' }} />
+        <div style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase' }}>Loading Auction...</div>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
   );
   if (error) return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#06090f', color:'#7a90b8', padding:24, fontFamily:'Barlow Condensed,sans-serif' }}>
-      <div style={{ textAlign:'center' }}>
-        <div style={{ width:56, height:56, borderRadius:'50%', background:'rgba(240,74,74,0.1)', border:'1px solid rgba(240,74,74,0.3)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#06090f', color: '#7a90b8', padding: 24, fontFamily: 'Barlow Condensed,sans-serif' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(240,74,74,0.1)', border: '1px solid rgba(240,74,74,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
           <IconXCircle />
         </div>
-        <h2 style={{ color:'#f04a4a', marginBottom:8, fontSize:'2rem', fontWeight:800 }}>Auction Not Found</h2>
-        <p style={{ fontFamily:'Barlow,sans-serif', fontSize:14 }}>Token <strong style={{ letterSpacing:2 }}>{token}</strong> is invalid or expired.</p>
+        <h2 style={{ color: '#f04a4a', marginBottom: 8, fontSize: '2rem', fontWeight: 800 }}>Auction Not Found</h2>
+        <p style={{ fontFamily: 'Barlow,sans-serif', fontSize: 14 }}>Token <strong style={{ letterSpacing: 2 }}>{token}</strong> is invalid or expired.</p>
       </div>
     </div>
   );
@@ -675,27 +710,27 @@ export default function ViewerPage({ token }) {
   const isLive = !!sess && !isSoldOrUnsold;
   const roleColor = sess?.player ? (ROLE_COLORS[sess.player.role] || '#f5a623') : '#f5a623';
 
-  const soldPlayers      = players.filter(p => p.status === 'Sold');
-  const unsoldPlayers    = players.filter(p => p.status === 'Unsold');
+  const soldPlayers = players.filter(p => p.status === 'Sold');
+  const unsoldPlayers = players.filter(p => p.status === 'Unsold');
   const availablePlayers = players.filter(p => p.status === 'Available');
 
   /* ── Detail chips with SVG icons ── */
   const detailChips = sess?.player ? [
     sess.player.basePrice != null && { icon: <IconCoin />, label: `Base ${formatCurrency(sess.player.basePrice)}` },
-    sess.player.age        && { icon: <IconCake />,  label: `Age ${sess.player.age}` },
-    sess.player.battingStyle  && { icon: <IconBat />,  label: sess.player.battingStyle },
-    sess.player.nationality   && { icon: <IconFlag />, label: sess.player.nationality },
-    sess.player.category      && { icon: <IconTag />,  label: sess.player.category },
+    sess.player.age && { icon: <IconCake />, label: `Age ${sess.player.age}` },
+    sess.player.battingStyle && { icon: <IconBat />, label: sess.player.battingStyle },
+    sess.player.nationality && { icon: <IconFlag />, label: sess.player.nationality },
+    sess.player.category && { icon: <IconTag />, label: sess.player.category },
   ].filter(Boolean) : [];
 
   /* ── Fullscreen overlay ── */
   const renderFsOverlayInfo = () => {
     if (!sess?.player) return null;
-    const isSold   = sess.status === 'Sold';
+    const isSold = sess.status === 'Sold';
     const isUnsold = sess.status === 'Unsold';
     return (
       <div className="vp-fs-info-overlay">
-        <div className="vp-fs-role-tag" style={{ background:`${roleColor}18`, color:roleColor }}>{sess.player.role}</div>
+        <div className="vp-fs-role-tag" style={{ background: `${roleColor}18`, color: roleColor }}>{sess.player.role}</div>
         <div className="vp-fs-name">{sess.player.name}</div>
         <div className="vp-fs-sub">
           {[sess.player.battingStyle, sess.player.bowlingStyle, sess.player.nationality].filter(Boolean).join(' · ')}
@@ -705,14 +740,14 @@ export default function ViewerPage({ token }) {
           <div className="vp-fs-status-block">
             {isSold ? (
               <>
-                <div className="vp-fs-status-label" style={{ color:'rgba(22,217,117,0.6)' }}>Acquired For</div>
-                <div className="vp-fs-status-amount" style={{ color:'#16d975' }}>{formatCurrency(sess.currentBid)}</div>
+                <div className="vp-fs-status-label" style={{ color: 'rgba(22,217,117,0.6)' }}>Acquired For</div>
+                <div className="vp-fs-status-amount" style={{ color: '#16d975' }}>{formatCurrency(sess.currentBid)}</div>
                 {sess.currentBidTeam && (
                   <div className="vp-fs-status-team">
                     <div className="vp-fs-team-logo" style={{ background: sess.currentBidTeam.color || '#172038' }}>
                       {sess.currentBidTeam.logo
                         ? <img src={sess.currentBidTeam.logo} alt="" />
-                        : <span style={{ fontSize:'.85rem' }}>{sess.currentBidTeam.shortName}</span>
+                        : <span style={{ fontSize: '.85rem' }}>{sess.currentBidTeam.shortName}</span>
                       }
                     </div>
                     <div>
@@ -727,8 +762,8 @@ export default function ViewerPage({ token }) {
             ) : isUnsold ? (
               <>
                 <div className="vp-fs-verdict-unsold"><IconXCircle /> Unsold</div>
-                <div style={{ marginTop:8, fontSize:'clamp(12px,1.6vw,16px)', color:'#7a3535' }}>No team placed a bid</div>
-                <div style={{ marginTop:4, fontSize:'clamp(10px,1.2vw,13px)', color:'#3a4f6e' }}>Base price: {formatCurrency(sess.player.basePrice)}</div>
+                <div style={{ marginTop: 8, fontSize: 'clamp(12px,1.6vw,16px)', color: '#7a3535' }}>No team placed a bid</div>
+                <div style={{ marginTop: 4, fontSize: 'clamp(10px,1.2vw,13px)', color: '#3a4f6e' }}>Base price: {formatCurrency(sess.player.basePrice)}</div>
               </>
             ) : (
               <>
@@ -739,18 +774,18 @@ export default function ViewerPage({ token }) {
                 {sess.currentBidTeamName ? (
                   <div className="vp-fs-status-team">
                     {sess.currentBidTeam?.logo
-                      ? <img src={sess.currentBidTeam.logo} alt="" style={{ width:'clamp(24px,3vw,36px)', height:'clamp(24px,3vw,36px)', borderRadius:6, objectFit:'cover' }} />
-                      : <div style={{ width:10, height:10, borderRadius:'50%', background: sess.currentBidTeam?.color, flexShrink:0 }} />
+                      ? <img src={sess.currentBidTeam.logo} alt="" style={{ width: 'clamp(24px,3vw,36px)', height: 'clamp(24px,3vw,36px)', borderRadius: 6, objectFit: 'cover' }} />
+                      : <div style={{ width: 10, height: 10, borderRadius: '50%', background: sess.currentBidTeam?.color, flexShrink: 0 }} />
                     }
-                    <div className="vp-fs-team-name" style={{ fontSize:'clamp(.9rem,2vw,1.6rem)' }}>{sess.currentBidTeamName}</div>
+                    <div className="vp-fs-team-name" style={{ fontSize: 'clamp(.9rem,2vw,1.6rem)' }}>{sess.currentBidTeamName}</div>
                   </div>
                 ) : (
-                  <div style={{ fontSize:'clamp(11px,1.2vw,14px)', color:'#3a4f6e', marginTop:6 }}>Base price · No bids yet</div>
+                  <div style={{ fontSize: 'clamp(11px,1.2vw,14px)', color: '#3a4f6e', marginTop: 6 }}>Base price · No bids yet</div>
                 )}
                 {sess.bids?.length > 0 && (
-                  <div className="vp-fs-bid-chips" style={{ marginTop:12 }}>
-                    {[...sess.bids].reverse().slice(0,5).map((b,i) => (
-                      <div key={i} className={`vp-fs-bid-chip${i===0?' vp-fs-bid-chip-top':''}`}>
+                  <div className="vp-fs-bid-chips" style={{ marginTop: 12 }}>
+                    {[...sess.bids].reverse().slice(0, 5).map((b, i) => (
+                      <div key={i} className={`vp-fs-bid-chip${i === 0 ? ' vp-fs-bid-chip-top' : ''}`}>
                         {b.teamName} · {formatCurrency(b.amount)}
                       </div>
                     ))}
@@ -761,11 +796,11 @@ export default function ViewerPage({ token }) {
           </div>
           {sess.player.stats && (
             <div className="vp-fs-stats-row">
-              {sess.player.stats.runs      > 0 && <div className="vp-fs-stat"><div className="vp-fs-stat-val" style={{ color:'#38d9f5' }}>{sess.player.stats.runs}</div><div className="vp-fs-stat-label">Runs</div></div>}
-              {sess.player.stats.wickets   > 0 && <div className="vp-fs-stat"><div className="vp-fs-stat-val" style={{ color:'#f04a4a' }}>{sess.player.stats.wickets}</div><div className="vp-fs-stat-label">Wickets</div></div>}
-              {sess.player.stats.average   > 0 && <div className="vp-fs-stat"><div className="vp-fs-stat-val" style={{ color:'#ffe066' }}>{sess.player.stats.average}</div><div className="vp-fs-stat-label">Avg</div></div>}
-              {sess.player.stats.strikeRate> 0 && <div className="vp-fs-stat"><div className="vp-fs-stat-val" style={{ color:'#f5a623' }}>{sess.player.stats.strikeRate}</div><div className="vp-fs-stat-label">SR</div></div>}
-              {sess.player.stats.economy   > 0 && <div className="vp-fs-stat"><div className="vp-fs-stat-val" style={{ color:'#c084fc' }}>{sess.player.stats.economy}</div><div className="vp-fs-stat-label">Econ</div></div>}
+              {sess.player.stats.runs > 0 && <div className="vp-fs-stat"><div className="vp-fs-stat-val" style={{ color: '#38d9f5' }}>{sess.player.stats.runs}</div><div className="vp-fs-stat-label">Runs</div></div>}
+              {sess.player.stats.wickets > 0 && <div className="vp-fs-stat"><div className="vp-fs-stat-val" style={{ color: '#f04a4a' }}>{sess.player.stats.wickets}</div><div className="vp-fs-stat-label">Wickets</div></div>}
+              {sess.player.stats.average > 0 && <div className="vp-fs-stat"><div className="vp-fs-stat-val" style={{ color: '#ffe066' }}>{sess.player.stats.average}</div><div className="vp-fs-stat-label">Avg</div></div>}
+              {sess.player.stats.strikeRate > 0 && <div className="vp-fs-stat"><div className="vp-fs-stat-val" style={{ color: '#f5a623' }}>{sess.player.stats.strikeRate}</div><div className="vp-fs-stat-label">SR</div></div>}
+              {sess.player.stats.economy > 0 && <div className="vp-fs-stat"><div className="vp-fs-stat-val" style={{ color: '#c084fc' }}>{sess.player.stats.economy}</div><div className="vp-fs-stat-label">Econ</div></div>}
             </div>
           )}
         </div>
@@ -781,30 +816,30 @@ export default function ViewerPage({ token }) {
         <div className="vp-acquired-bar vp-acquired-bar-sold">
           <div className="vp-acq-team-logo" style={{ background: sess.currentBidTeam?.color || '#172038' }}>
             {sess.currentBidTeam?.logo
-              ? <img src={sess.currentBidTeam.logo} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:8 }} />
+              ? <img src={sess.currentBidTeam.logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />
               : <span>{sess.currentBidTeam?.shortName}</span>
             }
           </div>
           <div>
-            <div className="vp-acq-label" style={{ color:'rgba(22,217,117,0.6)' }}>Acquired by</div>
+            <div className="vp-acq-label" style={{ color: 'rgba(22,217,117,0.6)' }}>Acquired by</div>
             {/* Full team name here, not shortName */}
             <div className="vp-acq-name">{sess.currentBidTeamName}</div>
           </div>
-          <div className="vp-acq-price" style={{ color:'#16d975' }}>{formatCurrency(sess.currentBid)}</div>
+          <div className="vp-acq-price" style={{ color: '#16d975' }}>{formatCurrency(sess.currentBid)}</div>
         </div>
       );
     }
     if (sess.status === 'Unsold') {
       return (
         <div className="vp-acquired-bar vp-acquired-bar-unsold">
-          <div style={{ width:36, height:36, borderRadius:8, background:'rgba(240,74,74,0.1)', border:'1px solid rgba(240,74,74,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, color:'#f04a4a' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(240,74,74,0.1)', border: '1px solid rgba(240,74,74,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#f04a4a' }}>
             <IconXCircle />
           </div>
           <div>
-            <div className="vp-acq-label" style={{ color:'rgba(240,74,74,0.6)' }}>Unsold</div>
-            <div className="vp-acq-name" style={{ color:'#94a3b8' }}>No team placed a bid</div>
+            <div className="vp-acq-label" style={{ color: 'rgba(240,74,74,0.6)' }}>Unsold</div>
+            <div className="vp-acq-name" style={{ color: '#94a3b8' }}>No team placed a bid</div>
           </div>
-          <div className="vp-acq-price" style={{ color:'#f04a4a' }}>{formatCurrency(sess.player?.basePrice)}</div>
+          <div className="vp-acq-price" style={{ color: '#f04a4a' }}>{formatCurrency(sess.player?.basePrice)}</div>
         </div>
       );
     }
@@ -842,7 +877,7 @@ export default function ViewerPage({ token }) {
   return (
     <div className="vp">
       {/* ── POPUPS ── */}
-      {popup?.type === 'sold'   && <SoldPopup   popup={popup} onDismiss={() => setPopup(null)} />}
+      {popup?.type === 'sold' && <SoldPopup popup={popup} onDismiss={() => setPopup(null)} />}
       {popup?.type === 'unsold' && <UnsoldPopup popup={popup} onDismiss={() => setPopup(null)} />}
 
       {/* ── HEADER ── */}
@@ -851,21 +886,21 @@ export default function ViewerPage({ token }) {
           <div className="vp-header-left">
             {event.logo
               ? <img src={event.logo} alt={event.name} className="vp-event-logo" />
-              : <div className="vp-event-logo-fb" style={{ color:roleColor }}>
-                  <IconBat />
-                </div>
+              : <div className="vp-event-logo-fb" style={{ color: roleColor }}>
+                <IconBat />
+              </div>
             }
             <div>
               <div className="vp-event-name">{event.name}</div>
               {event.season && <div className="vp-event-season">Season {event.season}</div>}
             </div>
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {isLive
               ? <div className="vp-live-pill"><span className="vp-live-dot" />{sess?.status === 'Paused' ? 'Paused' : 'Live'}</div>
-              : <div style={{ fontSize:11, color:'#3a4f6e', textTransform:'uppercase', letterSpacing:'.08em' }}>Not live</div>
+              : <div style={{ fontSize: 11, color: '#3a4f6e', textTransform: 'uppercase', letterSpacing: '.08em' }}>Not live</div>
             }
-            <div className="vp-updated">{lastUpdated?.toLocaleTimeString([],{ hour:'2-digit', minute:'2-digit', second:'2-digit' })}</div>
+            <div className="vp-updated">{lastUpdated?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
           </div>
         </div>
       )}
@@ -874,13 +909,13 @@ export default function ViewerPage({ token }) {
       {!fullscreen && (
         <div className="vp-strip">
           {[
-            { label:'Sold',      value:stats.sold,      color:'#16d975' },
-            { label:'Unsold',    value:stats.unsold,    color:'#f04a4a' },
-            { label:'Available', value:stats.available, color:'#f5a623' },
-            { label:'Total',     value:stats.total,     color:'#7a90b8' },
+            { label: 'Sold', value: stats.sold, color: '#16d975' },
+            { label: 'Unsold', value: stats.unsold, color: '#f04a4a' },
+            { label: 'Available', value: stats.available, color: '#f5a623' },
+            { label: 'Total', value: stats.total, color: '#7a90b8' },
           ].map(s => (
             <div key={s.label} className="vp-strip-item">
-              <div className="vp-strip-val" style={{ color:s.color }}>{s.value}</div>
+              <div className="vp-strip-val" style={{ color: s.color }}>{s.value}</div>
               <div className="vp-strip-label">{s.label}</div>
             </div>
           ))}
@@ -888,7 +923,7 @@ export default function ViewerPage({ token }) {
       )}
 
       {/* ── MAIN ── */}
-      <div className="vp-main" style={{ flex:1, minHeight:0 }}>
+      <div className="vp-main" style={{ flex: 1, minHeight: 0 }}>
 
         {/* CENTER */}
         <div className={`vp-center${fullscreen ? ' fullscreen' : ''}`}>
@@ -901,11 +936,11 @@ export default function ViewerPage({ token }) {
           {/* Show player card if there's an active session (live OR just sold/unsold) */}
           {sess?.player ? (
             <div className="vp-player-card" key={sess.player._id}>
-              <div className="vp-img-zone" style={{ background:`linear-gradient(160deg,#0a1628 0%,${roleColor}12 100%)` }}>
-                {sess.player?.imageUrl && <div className="vp-img-bg-blur" style={{ backgroundImage:`url(${sess.player.imageUrl})` }} />}
+              <div className="vp-img-zone" style={{ background: `linear-gradient(160deg,#0a1628 0%,${roleColor}12 100%)` }}>
+                {sess.player?.imageUrl && <div className="vp-img-bg-blur" style={{ backgroundImage: `url(${sess.player.imageUrl})` }} />}
                 {sess.player?.imageUrl
                   ? <img src={sess.player.imageUrl} alt={sess.player.name} />
-                  : <div className="vp-img-fallback-big" style={{ color:roleColor }}>{initials(sess.player?.name)}</div>
+                  : <div className="vp-img-fallback-big" style={{ color: roleColor }}>{initials(sess.player?.name)}</div>
                 }
                 {/* Status badge on the image */}
                 {!fullscreen && renderImgStatusBadge()}
@@ -918,7 +953,7 @@ export default function ViewerPage({ token }) {
 
                   <div className="vp-info-top">
                     <div>
-                      <div className="vp-role-tag" style={{ background:`${roleColor}18`, color:roleColor }}>{sess.player?.role}</div>
+                      <div className="vp-role-tag" style={{ background: `${roleColor}18`, color: roleColor }}>{sess.player?.role}</div>
                       <div className="vp-player-name-big">{sess.player?.name}</div>
                       <div className="vp-player-sub">
                         {[sess.player?.battingStyle, sess.player?.bowlingStyle, sess.player?.nationality].filter(Boolean).join(' · ')}
@@ -932,14 +967,14 @@ export default function ViewerPage({ token }) {
                       </div>
                       {sess.currentBidTeamName
                         ? <>
-                            <div className="vp-bid-team-mini" style={{ display:'flex', alignItems:'center', gap:6, justifyContent:'flex-end' }}>
-                              <div style={{ width:8, height:8, borderRadius:'50%', background:sess.currentBidTeam?.color, flexShrink:0 }} />
-                              {/* Full team name */}
-                              {sess.currentBidTeamName}
-                            </div>
-                            <div className="vp-bid-count-mini">{sess.bids?.length ?? 0} bid{sess.bids?.length !== 1 ? 's' : ''}</div>
-                          </>
-                        : <div style={{ fontSize:12, color:'#3a4f6e', marginTop:4 }}>Base · No bids yet</div>
+                          <div className="vp-bid-team-mini" style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: sess.currentBidTeam?.color, flexShrink: 0 }} />
+                            {/* Full team name */}
+                            {sess.currentBidTeamName}
+                          </div>
+                          <div className="vp-bid-count-mini">{sess.bids?.length ?? 0} bid{sess.bids?.length !== 1 ? 's' : ''}</div>
+                        </>
+                        : <div style={{ fontSize: 12, color: '#3a4f6e', marginTop: 4 }}>Base · No bids yet</div>
                       }
                     </div>
                   </div>
@@ -952,19 +987,19 @@ export default function ViewerPage({ token }) {
 
                   {sess.player?.stats && (
                     <div className="vp-stats-row">
-                      {sess.player.stats.matches   > 0 && <div className="vp-stat-chip"><div className="vp-stat-chip-val" style={{ color:'#7a90b8' }}>{sess.player.stats.matches}</div><div className="vp-stat-chip-label">Matches</div></div>}
-                      {sess.player.stats.runs      > 0 && <div className="vp-stat-chip"><div className="vp-stat-chip-val" style={{ color:'#38d9f5' }}>{sess.player.stats.runs}</div><div className="vp-stat-chip-label">Runs</div></div>}
-                      {sess.player.stats.wickets   > 0 && <div className="vp-stat-chip"><div className="vp-stat-chip-val" style={{ color:'#f04a4a' }}>{sess.player.stats.wickets}</div><div className="vp-stat-chip-label">Wickets</div></div>}
-                      {sess.player.stats.average   > 0 && <div className="vp-stat-chip"><div className="vp-stat-chip-val" style={{ color:'#ffe066' }}>{sess.player.stats.average}</div><div className="vp-stat-chip-label">Avg</div></div>}
-                      {sess.player.stats.strikeRate> 0 && <div className="vp-stat-chip"><div className="vp-stat-chip-val" style={{ color:'#f5a623' }}>{sess.player.stats.strikeRate}</div><div className="vp-stat-chip-label">SR</div></div>}
-                      {sess.player.stats.economy   > 0 && <div className="vp-stat-chip"><div className="vp-stat-chip-val" style={{ color:'#c084fc' }}>{sess.player.stats.economy}</div><div className="vp-stat-chip-label">Econ</div></div>}
+                      {sess.player.stats.matches > 0 && <div className="vp-stat-chip"><div className="vp-stat-chip-val" style={{ color: '#7a90b8' }}>{sess.player.stats.matches}</div><div className="vp-stat-chip-label">Matches</div></div>}
+                      {sess.player.stats.runs > 0 && <div className="vp-stat-chip"><div className="vp-stat-chip-val" style={{ color: '#38d9f5' }}>{sess.player.stats.runs}</div><div className="vp-stat-chip-label">Runs</div></div>}
+                      {sess.player.stats.wickets > 0 && <div className="vp-stat-chip"><div className="vp-stat-chip-val" style={{ color: '#f04a4a' }}>{sess.player.stats.wickets}</div><div className="vp-stat-chip-label">Wickets</div></div>}
+                      {sess.player.stats.average > 0 && <div className="vp-stat-chip"><div className="vp-stat-chip-val" style={{ color: '#ffe066' }}>{sess.player.stats.average}</div><div className="vp-stat-chip-label">Avg</div></div>}
+                      {sess.player.stats.strikeRate > 0 && <div className="vp-stat-chip"><div className="vp-stat-chip-val" style={{ color: '#f5a623' }}>{sess.player.stats.strikeRate}</div><div className="vp-stat-chip-label">SR</div></div>}
+                      {sess.player.stats.economy > 0 && <div className="vp-stat-chip"><div className="vp-stat-chip-val" style={{ color: '#c084fc' }}>{sess.player.stats.economy}</div><div className="vp-stat-chip-label">Econ</div></div>}
                     </div>
                   )}
 
                   {sess.bids?.length > 0 && (
                     <div className="vp-history-chips">
-                      {[...sess.bids].reverse().slice(0,7).map((b,i) => (
-                        <div key={i} className={`vp-hchip${i===0?' vp-hchip-top':''}`}>
+                      {[...sess.bids].reverse().slice(0, 7).map((b, i) => (
+                        <div key={i} className={`vp-hchip${i === 0 ? ' vp-hchip-top' : ''}`}>
                           {b.teamName} · {formatCurrency(b.amount)}
                         </div>
                       ))}
@@ -999,8 +1034,8 @@ export default function ViewerPage({ token }) {
         {!fullscreen && (
           <div className="vp-right">
             <div className="vp-tabs">
-              {[['teams','Teams'],['recent','Recent'],['all','All'],['chat','Chat']].map(([id,label]) => (
-                <div key={id} className={`vp-tab${activeTab===id?' active':''}`} onClick={() => setActiveTab(id)}>{label}</div>
+              {[['teams', 'Teams'], ['recent', 'Recent'], ['all', 'All']].map(([id, label]) => (
+                <div key={id} className={`vp-tab${activeTab === id ? ' active' : ''}`} onClick={() => setActiveTab(id)}>{label}</div>
               ))}
             </div>
 
@@ -1009,23 +1044,23 @@ export default function ViewerPage({ token }) {
                 <div className="vp-teams">
                   {teams.map(t => {
                     const spent = t.budget - t.remainingBudget;
-                    const pct   = Math.min(100, Math.round((spent / t.budget) * 100));
+                    const pct = Math.min(100, Math.round((spent / t.budget) * 100));
                     return (
                       <div key={t._id} className="vp-team-card">
                         <div className="vp-team-card-header">
                           <div className="vp-team-badge" style={{ background: t.logo ? 'transparent' : (t.color || '#172038') }}>
                             {t.logo ? <img src={t.logo} alt={t.name} /> : t.shortName}
                           </div>
-                          <div style={{ flex:1, minWidth:0 }}>
-                            <div className="vp-team-name-sm" style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.name}</div>
-                            <div style={{ fontSize:10, color:'#3a4f6e' }}>{t.players.length} players · {pct}% spent</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div className="vp-team-name-sm" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</div>
+                            <div style={{ fontSize: 10, color: '#3a4f6e' }}>{t.players.length} players · {pct}% spent</div>
                           </div>
                           <div className="vp-team-budget-sm" style={{ color: pct > 80 ? '#f5a623' : '#16d975' }}>
                             {formatCurrency(t.remainingBudget)}
                           </div>
                         </div>
                         <div className="vp-budget-track">
-                          <div className="vp-budget-fill" style={{ width:`${pct}%`, background: t.color || '#3b82f6' }} />
+                          <div className="vp-budget-fill" style={{ width: `${pct}%`, background: t.color || '#3b82f6' }} />
                         </div>
                         {t.players.length > 0 ? (
                           <div className="vp-team-players-full">
@@ -1038,7 +1073,7 @@ export default function ViewerPage({ token }) {
                             ))}
                           </div>
                         ) : (
-                          <div style={{ padding:'6px 12px 10px', fontSize:11, color:'#3a4f6e', fontStyle:'italic' }}>No players yet</div>
+                          <div style={{ padding: '6px 12px 10px', fontSize: 11, color: '#3a4f6e', fontStyle: 'italic' }}>No players yet</div>
                         )}
                       </div>
                     );
@@ -1048,21 +1083,21 @@ export default function ViewerPage({ token }) {
 
               {activeTab === 'recent' && (
                 history.length === 0
-                  ? <div style={{ textAlign:'center', padding:'28px 0', color:'#3a4f6e', fontSize:13 }}>No sales yet</div>
-                  : history.slice(0,25).map(h => (
+                  ? <div style={{ textAlign: 'center', padding: '28px 0', color: '#3a4f6e', fontSize: 13 }}>No sales yet</div>
+                  : history.slice(0, 25).map(h => (
                     <div key={h._id} className="vp-prow">
-                      <div style={{ width:7, height:7, borderRadius:'50%', background: h.status==='Sold'?'#16d975':'#f04a4a', flexShrink:0 }} />
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: h.status === 'Sold' ? '#16d975' : '#f04a4a', flexShrink: 0 }} />
                       <div className="vp-prow-av">{h.player?.imageUrl ? <img src={h.player.imageUrl} alt="" /> : initials(h.player?.name)}</div>
-                      <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="vp-prow-name">{h.player?.name}</div>
                         <div className="vp-prow-role">{h.player?.role}</div>
                       </div>
                       {h.status === 'Sold'
-                        ? <div style={{ textAlign:'right', flexShrink:0 }}>
-                            <div style={{ fontSize:12, fontWeight:700, color:'#16d975' }}>{formatCurrency(h.currentBid)}</div>
-                            {/* Full team name in recent list */}
-                            <div style={{ fontSize:10, color:'#3a4f6e' }}>{h.currentBidTeam?.name || h.currentBidTeam?.shortName}</div>
-                          </div>
+                        ? <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#16d975' }}>{formatCurrency(h.currentBid)}</div>
+                          {/* Full team name in recent list */}
+                          <div style={{ fontSize: 10, color: '#3a4f6e' }}>{h.currentBidTeam?.name || h.currentBidTeam?.shortName}</div>
+                        </div>
                         : <span className="vp-status-pill vp-s-unsold">Unsold</span>
                       }
                     </div>
@@ -1071,7 +1106,7 @@ export default function ViewerPage({ token }) {
 
               {activeTab === 'all' && (
                 <>
-                  <div style={{ display:'flex', gap:6, padding:'8px 12px', borderBottom:'1px solid var(--border)', flexWrap:'wrap' }}>
+                  <div style={{ display: 'flex', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
                     <span className="vp-status-pill vp-s-sold">{soldPlayers.length} Sold</span>
                     <span className="vp-status-pill vp-s-available">{availablePlayers.length} Available</span>
                     <span className="vp-status-pill vp-s-unsold">{unsoldPlayers.length} Unsold</span>
@@ -1080,19 +1115,19 @@ export default function ViewerPage({ token }) {
                     const rc = ROLE_COLORS[p.role] || '#64748b';
                     return (
                       <div key={p._id} className="vp-prow">
-                        <div className="vp-prow-av" style={{ background:`${rc}18`, color:rc }}>
+                        <div className="vp-prow-av" style={{ background: `${rc}18`, color: rc }}>
                           {p.imageUrl ? <img src={p.imageUrl} alt={p.name} /> : initials(p.name)}
                         </div>
-                        <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div className="vp-prow-name">{p.name}</div>
                           <div className="vp-prow-role">{p.role}</div>
                         </div>
                         {p.status === 'Sold'
-                          ? <div style={{ textAlign:'right', flexShrink:0 }}>
-                              <div style={{ fontSize:12, fontWeight:700, color:'#16d975' }}>{formatCurrency(p.soldPrice)}</div>
-                              {/* Full team name */}
-                              <div style={{ fontSize:10, color:'#3a4f6e' }}>{p.team?.name || p.team?.shortName}</div>
-                            </div>
+                          ? <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: '#16d975' }}>{formatCurrency(p.soldPrice)}</div>
+                            {/* Full team name */}
+                            <div style={{ fontSize: 10, color: '#3a4f6e' }}>{p.team?.name || p.team?.shortName}</div>
+                          </div>
                           : <span className={`vp-status-pill vp-s-${p.status.toLowerCase()}`}>{p.status}</span>
                         }
                       </div>
@@ -1103,11 +1138,33 @@ export default function ViewerPage({ token }) {
             </div>
           </div>
         )}
+        {/* ── FLOATING CHAT ── */}
+        <button
+          className="vp-chat-fab"
+          onClick={() => { setChatOpen(o => !o); setUnreadCount(0); }}
+          title="Live Chat"
+        >
+          {chatOpen
+            ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+          }
+          {!chatOpen && unreadCount > 0 && (
+            <span className="vp-chat-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+          )}
+        </button>
+
+        <div className={`vp-chat-drawer${chatOpen ? '' : ' closed'}`}>
+          <ChatPanel
+            token={token}
+            guestName={undefined}
+            onNewMessage={() => { if (!chatOpen) setUnreadCount(c => c + 1); }}
+          />
+        </div>
       </div>
 
       {!fullscreen && (
         <div className="vp-footer">
-         मा. श्री. पवन पाटणे यांच्या सहकार्याने❤️
+          मा. श्री. पवन पाटणे यांच्या सहकार्याने❤️
         </div>
       )}
     </div>

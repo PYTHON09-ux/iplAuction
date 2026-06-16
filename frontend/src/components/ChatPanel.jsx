@@ -2,9 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import useChat from '../hooks/useChat';
 
 const GUEST_COLORS = [
-  '#38d9f5','#16d975','#f5a623','#c084fc',
-  '#f87171','#34d399','#60a5fa','#fbbf24',
-  '#a78bfa','#fb923c','#4ade80','#e879f9',
+  '#38d9f5', '#16d975', '#f5a623', '#c084fc',
+  '#f87171', '#34d399', '#60a5fa', '#fbbf24',
+  '#a78bfa', '#fb923c', '#4ade80', '#e879f9',
 ];
 
 export default function ChatPanel({ token, guestName }) {
@@ -17,6 +17,15 @@ export default function ChatPanel({ token, guestName }) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const prevMsgCount = useRef(0);
+  useEffect(() => {
+    if (messages.length > prevMsgCount.current) {
+      const newMsgs = messages.slice(prevMsgCount.current);
+      const hasGuest = newMsgs.some(m => m.senderType !== 'system');
+      if (hasGuest && onNewMessage) onNewMessage();
+    }
+    prevMsgCount.current = messages.length;
+  }, [messages]);
   const handleSend = () => {
     if (!input.trim()) return;
     send(input);
