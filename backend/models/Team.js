@@ -6,7 +6,7 @@ const teamSchema = new mongoose.Schema({
   owner: { type: String, required: true },
   city: { type: String, default: '' },
   color: { type: String, default: '#3B82F6' },
-  budget: { type: Number, required: true, default: 5000000 },
+  budget: { type: Number, required: true, default: 3000 },
   remainingBudget: { type: Number },
   players: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Player' }],
   maxPlayers: { type: Number, default: 15 },
