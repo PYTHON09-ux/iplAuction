@@ -19,13 +19,9 @@ export default function ChatPanel({ token, guestName }) {
 
   const prevMsgCount = useRef(0);
   useEffect(() => {
-    if (messages.length > prevMsgCount.current) {
-      const newMsgs = messages.slice(prevMsgCount.current);
-      const hasGuest = newMsgs.some(m => m.senderType !== 'system');
-      if (hasGuest && onNewMessage) onNewMessage();
-    }
     prevMsgCount.current = messages.length;
   }, [messages]);
+  
   const handleSend = () => {
     if (!input.trim()) return;
     send(input);
