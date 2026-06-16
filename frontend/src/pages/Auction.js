@@ -10,11 +10,13 @@ export default function Auction() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [showQueue, setShowQueue] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [bidFlash, setBidFlash] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null); // { type, label, fn }
 
   const evId = activeEvent?._id;
   const minInc = activeEvent?.minBidIncrement || 10000;
-  const increments = [minInc, minInc * 2.5, minInc * 5, minInc * 10, minInc * 25, minInc * 50].map(v => Math.round(v));
+  const increments = [minInc, minInc * 2, minInc * 5, minInc * 10, minInc * 20, minInc * 50].map(v => Math.round(v));
 
   useEffect(() => {
     loadAll();
@@ -59,27 +61,20 @@ export default function Auction() {
 
   const handleBid = async (amount) => {
     if (!currentAuction || !selectedTeam) return showToast('Select a team first', 'error');
-
     const team = teams.find(t => t._id === selectedTeam);
     if (!team) return showToast('Team not found', 'error');
-
     const remainingSlots = team.maxPlayers - team.players.length;
     const minBasePrice = activeEvent?.defaultBasePrice || 0;
     const reservedBudget = (remainingSlots - 1) * minBasePrice;
     const effectiveMaxBid = team.remainingBudget - reservedBudget;
-
     if (amount > effectiveMaxBid) {
-      showToast(
-        `❌ ${team.name} can only bid up to ${formatCurrency(effectiveMaxBid)}. Must reserve ${formatCurrency(reservedBudget)} for ${remainingSlots - 1} more players.`,
-        'error'
-      );
+      showToast(`❌ Max bid: ${formatCurrency(effectiveMaxBid)}. Reserve ${formatCurrency(reservedBudget)} for ${remainingSlots - 1} slots.`, 'error');
       return;
     }
     if (amount <= currentAuction.currentBid) {
-      showToast(`❌ Bid must be higher than ${formatCurrency(currentAuction.currentBid)}`, 'error');
+      showToast(`❌ Bid must exceed ${formatCurrency(currentAuction.currentBid)}`, 'error');
       return;
     }
-
     const prevAuction = currentAuction;
     const optimisticSession = {
       ...currentAuction,
@@ -90,14 +85,13 @@ export default function Auction() {
     };
     setCurrentAuction(optimisticSession);
     setBidFlash(true);
-    setTimeout(() => setBidFlash(false), 600);
-
+    setTimeout(() => setBidFlash(false), 500);
     await withLoad(async () => {
       try {
         const session = await api.placeBid(prevAuction._id, selectedTeam, amount);
         setCurrentAuction(session);
         await refreshTeams(evId ? { auctionEvent: evId } : {});
-        showToast(`✅ Bid: ${formatCurrency(amount)}`);
+        showToast(`✅ ${team.shortName} bid ${formatCurrency(amount)}`);
       } catch (e) {
         setCurrentAuction(prevAuction);
         showToast(`❌ ${e.message}`, 'error');
@@ -106,66 +100,57 @@ export default function Auction() {
   };
 
   const handleSold = async () => {
-    if (!currentAuction) return;
     await withLoad(async () => {
       try {
         await api.markSold(currentAuction._id);
         showToast(`🔨 SOLD! ${currentAuction.player?.name} → ${currentAuction.currentBidTeamName}`);
-        setCurrentAuction(null); setSelectedTeam('');
+        setCurrentAuction(null); setSelectedTeam(''); setConfirmAction(null);
         loadAll();
       } catch (e) { showToast(e.message, 'error'); }
     });
   };
 
   const handleUnsold = async () => {
-    if (!currentAuction) return;
     await withLoad(async () => {
       try {
         await api.markUnsold(currentAuction._id);
         showToast(`${currentAuction.player?.name} marked UNSOLD`);
-        setCurrentAuction(null);
+        setCurrentAuction(null); setConfirmAction(null);
         loadAll();
       } catch (e) { showToast(e.message, 'error'); }
     });
   };
 
   const handleUndo = async () => {
-    if (!currentAuction) return;
     const prevAuction = currentAuction;
     const newBids = currentAuction.bids.slice(0, -1);
     const lastBid = newBids[newBids.length - 1];
-    const optimisticSession = {
-      ...currentAuction,
-      bids: newBids,
+    setCurrentAuction({
+      ...currentAuction, bids: newBids,
       currentBid: lastBid?.amount ?? currentAuction.basePrice,
       currentBidTeam: lastBid ? { _id: lastBid.team, name: lastBid.teamName } : null,
       currentBidTeamName: lastBid?.teamName ?? null,
-    };
-    setCurrentAuction(optimisticSession);
+    });
     await withLoad(async () => {
       try {
         const session = await api.undoBid(prevAuction._id);
         setCurrentAuction(session);
         await refreshTeams(evId ? { auctionEvent: evId } : {});
-        showToast('↩ Last bid undone');
-      } catch (e) {
-        setCurrentAuction(prevAuction);
-        showToast(e.message, 'error');
-      }
+        showToast('↩ Bid undone');
+      } catch (e) { setCurrentAuction(prevAuction); showToast(e.message, 'error'); }
     });
   };
 
   const handlePause = async () => {
-    if (!currentAuction) return;
     try {
       const session = await api.pauseAuction(currentAuction._id);
       setCurrentAuction(session);
-      showToast(session.status === 'Paused' ? '⏸ Auction paused' : '▶ Auction resumed');
+      showToast(session.status === 'Paused' ? '⏸ Paused' : '▶ Resumed');
     } catch (e) { showToast(e.message, 'error'); }
   };
 
-  const roleColor = currentAuction?.player ? ROLE_COLORS[currentAuction.player.role] : 'var(--accent)';
-  const nextBase = currentAuction ? currentAuction.currentBid : 0;
+  const roleColor = currentAuction?.player ? ROLE_COLORS[currentAuction.player.role] : '#f5a623';
+  const nextBase = currentAuction?.currentBid ?? 0;
   const filteredAvailable = availablePlayers.filter(p =>
     !search || p.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -174,436 +159,464 @@ export default function Auction() {
   const reservedBudget = selectedTeamData ? (remainingSlots - 1) * (activeEvent?.defaultBasePrice || 0) : 0;
   const effectiveMaxBid = selectedTeamData ? selectedTeamData.remainingBudget - reservedBudget : Infinity;
   const isPaused = currentAuction?.status === 'Paused';
+  const hasBid = !!currentAuction?.currentBidTeam;
 
   const css = `
-    .auc-wrap { display: flex; flex-direction: column; gap: 0; }
-    .auc-topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); gap: 10px; flex-wrap: wrap; }
-    .auc-topbar h1 { font-size: 1.1rem; margin: 0; }
-    .auc-topbar p { font-size: 0.78rem; color: var(--text3); margin: 0; }
-    .auc-body { display: grid; grid-template-columns: 1fr 340px; gap: 0; min-height: calc(100vh - 120px); }
-    .auc-main { display: flex; flex-direction: column; gap: 0; border-right: 1px solid var(--border); overflow-y: auto; }
-    .auc-sidebar { display: flex; flex-direction: column; overflow: hidden; }
+    *{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
+    .a-root{display:flex;flex-direction:column;height:100vh;overflow:hidden;background:var(--bg)}
+    
+    /* TOP BAR */
+    .a-topbar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+    .a-topbar-title{font-size:1rem;font-weight:800;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .a-topbar-sub{font-size:0.7rem;color:var(--text3)}
+    .a-queue-btn{display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:0.75rem;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap}
+    .a-queue-btn:active{transform:scale(0.95)}
 
-    /* Player hero */
-    .player-hero { position: relative; padding: 20px 20px 16px; background: linear-gradient(160deg, var(--bg2) 0%, var(--bg) 100%); border-bottom: 1px solid var(--border); }
-    .player-hero-inner { display: flex; gap: 16px; align-items: center; }
-    .player-avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 3px solid; box-shadow: 0 0 20px rgba(0,0,0,0.4); }
-    .player-avatar-fb { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 800; flex-shrink: 0; border: 3px solid; }
-    .player-name { font-size: clamp(1.2rem, 3vw, 1.8rem); font-weight: 800; line-height: 1.1; }
-    .player-meta { font-size: 0.8rem; color: var(--text2); margin-top: 4px; }
-    .player-stats { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
-    .player-stat { padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; background: rgba(255,255,255,0.06); border: 1px solid var(--border); }
-    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
-    .live-dot { width: 6px; height: 6px; border-radius: 50%; background: #f04a4a; animation: pulse 1.1s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+    /* SCROLL AREA */
+    .a-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    .a-scroll::-webkit-scrollbar{display:none}
 
-    /* Bid display */
-    .bid-display { padding: 14px 20px; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .bid-amount { font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 900; transition: color 0.3s; }
-    .bid-amount.flash { animation: bidFlash 0.5s ease; }
-    @keyframes bidFlash { 0%{transform:scale(1)} 30%{transform:scale(1.08)} 100%{transform:scale(1)} }
-    .bid-team { font-size: 0.85rem; font-weight: 600; margin-top: 2px; }
-    .bid-count { font-size: 0.72rem; color: var(--text3); margin-top: 2px; }
+    /* PLAYER CARD */
+    .a-player{padding:14px;border-bottom:1px solid var(--border)}
+    .a-player-top{display:flex;align-items:center;gap:12px}
+    .a-avatar{width:60px;height:60px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2.5px solid}
+    .a-avatar-fb{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:900;flex-shrink:0;border:2.5px solid}
+    .a-player-name{font-size:1.2rem;font-weight:900;line-height:1.1}
+    .a-player-meta{font-size:0.72rem;color:var(--text2);margin-top:3px}
+    .a-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:20px;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px}
+    .a-live-dot{width:5px;height:5px;border-radius:50%;background:#f04a4a;animation:adot 1.1s infinite}
+    @keyframes adot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.6)}}
+    .a-stats{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+    .a-stat{padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid var(--border)}
 
-    /* Team grid */
-    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
-    .team-btn { padding: 8px 6px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg2); cursor: pointer; transition: all 0.15s; text-align: center; position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    .team-btn:hover:not(:disabled) { border-color: rgba(255,255,255,0.2); background: var(--bg3); transform: translateY(-1px); }
-    .team-btn.selected { border-color: var(--accent); background: rgba(245,158,11,0.08); box-shadow: 0 0 0 1px var(--accent); }
-    .team-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-    .team-btn-name { font-size: 0.75rem; font-weight: 700; }
-    .team-btn-budget { font-size: 0.65rem; }
-    .team-btn-warn { font-size: 0.58rem; color: #f04a4a; }
+    /* BID DISPLAY */
+    .a-bid{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg2);border-bottom:1px solid var(--border)}
+    .a-bid-amount{font-size:2rem;font-weight:900;line-height:1;transition:color 0.3s}
+    .a-bid-amount.flash{animation:aflash 0.4s ease}
+    @keyframes aflash{0%,100%{transform:scale(1)}40%{transform:scale(1.1)}}
+    .a-bid-label{font-size:0.62rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px}
+    .a-bid-team{font-size:0.78rem;font-weight:700;margin-top:3px;display:flex;align-items:center;gap:5px}
+    .a-bid-right{text-align:right}
+    .a-bid-count{font-size:0.68rem;color:var(--text3)}
 
-    /* Budget bar */
-    .budget-bar { margin: 0 16px 12px; padding: 10px 14px; border-radius: 10px; font-size: 0.8rem; display: flex; flex-direction: column; gap: 4px; }
-    .budget-bar-row { display: flex; justify-content: space-between; align-items: center; }
+    /* SECTION LABEL */
+    .a-section-label{font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);padding:10px 14px 6px}
 
-    /* Quick bids */
-    .quick-bids { padding: 0 16px 14px; }
-    .quick-bids-label { font-size: 0.7rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; margin-bottom: 8px; }
-    .quick-bid-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
-    .quick-bid-btn { padding: 10px 4px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg2); cursor: pointer; transition: all 0.15s; text-align: center; display: flex; flex-direction: column; gap: 1px; align-items: center; }
-    .quick-bid-btn:hover:not(:disabled) { border-color: var(--accent); background: rgba(245,158,11,0.06); transform: translateY(-1px); }
-    .quick-bid-btn:active:not(:disabled) { transform: scale(0.96); }
-    .quick-bid-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-    .quick-bid-btn .inc { font-size: 0.75rem; font-weight: 700; }
-    .quick-bid-btn .total { font-size: 0.65rem; color: var(--text3); }
-    .quick-bid-btn .over { font-size: 0.58rem; color: #f04a4a; }
-    .custom-bid-row { display: flex; gap: 8px; }
-    .custom-bid-row input { flex: 1; }
+    /* TEAM GRID */
+    .a-teams{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:0 14px 10px}
+    .a-team{padding:8px 5px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg2);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;transition:all 0.12s;-webkit-user-select:none;user-select:none}
+    .a-team:active:not(:disabled){transform:scale(0.94)}
+    .a-team.sel{border-color:var(--accent);background:rgba(245,158,11,0.1);box-shadow:0 0 0 1px var(--accent)}
+    .a-team:disabled{opacity:0.4;cursor:not-allowed}
+    .a-team-logo{width:22px;height:22px;border-radius:4px;object-fit:cover}
+    .a-team-dot{width:8px;height:8px;border-radius:50%}
+    .a-team-name{font-size:0.72rem;font-weight:800}
+    .a-team-budget{font-size:0.6rem}
+    .a-team-warn{font-size:0.55rem;color:#f04a4a}
+    .a-team-check{position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
 
-    /* Controls */
-    .controls { display: flex; gap: 8px; padding: 14px 16px; border-top: 1px solid var(--border); flex-wrap: wrap; }
-    .controls .btn { flex: 1; min-width: 80px; padding: 12px 8px; font-size: 0.82rem; font-weight: 700; border-radius: 10px; border: none; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 5px; }
-    .controls .btn:active:not(:disabled) { transform: scale(0.96); }
-    .controls .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-sold { background: var(--green, #16a34a); color: #fff; font-size: 1rem !important; }
-    .btn-sold:hover:not(:disabled) { background: #15803d; }
-    .btn-unsold { background: rgba(239,68,68,0.15); color: #f87171; border: 1.5px solid rgba(239,68,68,0.3) !important; }
-    .btn-unsold:hover:not(:disabled) { background: rgba(239,68,68,0.25); }
-    .btn-pause { background: rgba(245,158,11,0.12); color: var(--accent); border: 1.5px solid rgba(245,158,11,0.25) !important; }
-    .btn-pause:hover:not(:disabled) { background: rgba(245,158,11,0.2); }
-    .btn-undo { background: var(--bg3); color: var(--text2); border: 1.5px solid var(--border) !important; }
-    .btn-undo:hover:not(:disabled) { background: var(--bg2); color: var(--text); }
+    /* BUDGET INFO */
+    .a-budget{margin:0 14px 10px;padding:9px 12px;border-radius:10px;font-size:0.75rem;display:flex;flex-direction:column;gap:3px}
+    .a-budget-row{display:flex;justify-content:space-between;align-items:center}
+    .a-budget-bar{height:3px;border-radius:2px;background:rgba(255,255,255,0.07);margin-top:5px;overflow:hidden}
+    .a-budget-fill{height:100%;border-radius:2px;transition:width 0.4s}
 
-    /* Sidebar */
-    .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border); background: var(--bg2); flex-shrink: 0; }
-    .sidebar-header h3 { margin: 0; font-size: 0.9rem; }
-    .sidebar-search { padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-    .player-list { flex: 1; overflow-y: auto; }
-    .player-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); transition: background 0.12s; cursor: default; }
-    .player-row:hover { background: var(--bg2); }
-    .player-row.active { background: rgba(245,158,11,0.08); border-left: 3px solid var(--accent); }
-    .player-row-av { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-    .player-row-av-fb { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; flex-shrink: 0; }
-    .player-row-name { font-size: 0.85rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .player-row-meta { font-size: 0.7rem; color: var(--text3); }
-    .start-btn { padding: 6px 14px; border-radius: 8px; border: none; background: var(--accent); color: #000; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
-    .start-btn:hover:not(:disabled) { background: #d97706; transform: scale(1.04); }
-    .start-btn:active:not(:disabled) { transform: scale(0.96); }
-    .start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    /* QUICK BIDS */
+    .a-quick{padding:0 14px 10px}
+    .a-quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+    .a-qbtn{padding:10px 4px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg2);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;transition:all 0.12s;-webkit-user-select:none;user-select:none}
+    .a-qbtn:active:not(:disabled){transform:scale(0.93)}
+    .a-qbtn:disabled{opacity:0.3;cursor:not-allowed}
+    .a-qbtn-inc{font-size:0.72rem;font-weight:800}
+    .a-qbtn-total{font-size:0.6rem;color:var(--text3)}
+    .a-qbtn-over{font-size:0.55rem;color:#f04a4a}
 
-    /* Bid history */
-    .bid-history { border-top: 1px solid var(--border); }
-    .bid-history-header { padding: 10px 16px; font-size: 0.75rem; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
-    .bid-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 16px; border-bottom: 1px solid var(--border); font-size: 0.82rem; animation: fadeIn 0.2s ease; }
-    @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+    /* CUSTOM BID */
+    .a-custom{padding:0 14px 10px;display:flex;gap:7px}
+    .a-custom input{flex:1;font-size:0.85rem;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text);outline:none}
+    .a-custom input:focus{border-color:var(--accent)}
+    .a-custom-btn{padding:0 16px;border-radius:10px;border:none;background:var(--accent);color:#000;font-weight:800;font-size:0.85rem;cursor:pointer;flex-shrink:0;transition:all 0.12s}
+    .a-custom-btn:active:not(:disabled){transform:scale(0.94)}
+    .a-custom-btn:disabled{opacity:0.35;cursor:not-allowed}
+    .a-custom-warn{padding:0 14px 8px;font-size:0.7rem;color:#f87171}
 
-    /* Queue drawer (mobile) */
-    .queue-fab { display: none; position: fixed; bottom: 80px; right: 16px; z-index: 200; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: #000; border: none; font-size: 1.3rem; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.4); transition: transform 0.15s; align-items: center; justify-content: center; }
-    .queue-fab:active { transform: scale(0.92); }
-    .queue-drawer { display: none; position: fixed; inset: 0; z-index: 300; }
-    .queue-drawer-bg { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
-    .queue-drawer-panel { position: absolute; bottom: 0; left: 0; right: 0; background: var(--bg); border-radius: 16px 16px 0 0; max-height: 75vh; display: flex; flex-direction: column; animation: slideUp 0.25s ease; }
-    @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
-    .queue-drawer-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--border2); margin: 10px auto 0; flex-shrink: 0; }
+    /* CONTROLS */
+    .a-controls{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg)}
+    .a-ctrl{padding:13px 8px;border-radius:12px;border:none;font-size:0.82rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.12s;-webkit-user-select:none;user-select:none}
+    .a-ctrl:active:not(:disabled){transform:scale(0.95)}
+    .a-ctrl:disabled{opacity:0.35;cursor:not-allowed}
+    .a-ctrl.sold{background:#16d975;color:#000;grid-column:1/-1;font-size:1rem;padding:15px}
+    .a-ctrl.unsold{background:rgba(240,74,74,0.12);color:#f87171;border:1.5px solid rgba(240,74,74,0.25)}
+    .a-ctrl.pause{background:rgba(245,158,11,0.1);color:var(--accent);border:1.5px solid rgba(245,158,11,0.2)}
+    .a-ctrl.undo{background:var(--bg3);color:var(--text2);border:1.5px solid var(--border)}
 
-    /* No auction */
-    .no-auction { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 24px; gap: 12px; text-align: center; flex: 1; }
+    /* BID HISTORY SHEET */
+    .a-sheet{position:fixed;inset:0;z-index:400;pointer-events:none;opacity:0;transition:opacity 0.2s}
+    .a-sheet.open{pointer-events:all;opacity:1}
+    .a-sheet-bg{position:absolute;inset:0;background:rgba(0,0,0,0.65)}
+    .a-sheet-panel{position:absolute;bottom:0;left:0;right:0;background:var(--bg);border-radius:18px 18px 0 0;max-height:70vh;display:flex;flex-direction:column;animation:aup 0.25s ease}
+    @keyframes aup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+    .a-sheet-handle{width:32px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0}
+    .a-sheet-title{padding:12px 16px;font-weight:800;font-size:0.9rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+    .a-sheet-body{overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
+    .a-hist-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);font-size:0.82rem}
 
-    /* Mobile responsive */
-    @media (max-width: 768px) {
-      .auc-body { grid-template-columns: 1fr; }
-      .auc-sidebar { display: none; }
-      .queue-fab { display: flex; }
-      .queue-drawer { display: block; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
-      .queue-drawer.open { pointer-events: all; opacity: 1; }
-      .team-grid { grid-template-columns: repeat(2, 1fr); }
-      .quick-bid-grid { grid-template-columns: repeat(2, 1fr); }
-      .controls .btn { min-width: 60px; font-size: 0.75rem; padding: 11px 6px; }
-      .player-hero { padding: 14px; }
-      .player-avatar, .player-avatar-fb { width: 64px; height: 64px; }
-    }
-    @media (max-width: 400px) {
-      .team-grid { grid-template-columns: repeat(2, 1fr); }
-      .quick-bid-grid { grid-template-columns: repeat(2, 1fr); }
-    }
+    /* QUEUE DRAWER */
+    .a-drawer{position:fixed;inset:0;z-index:400;pointer-events:none;opacity:0;transition:opacity 0.2s}
+    .a-drawer.open{pointer-events:all;opacity:1}
+    .a-drawer-bg{position:absolute;inset:0;background:rgba(0,0,0,0.65)}
+    .a-drawer-panel{position:absolute;bottom:0;left:0;right:0;background:var(--bg);border-radius:18px 18px 0 0;max-height:80vh;display:flex;flex-direction:column;animation:aup 0.25s ease}
+    .a-drawer-handle{width:32px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0}
+    .a-drawer-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .a-drawer-header h3{margin:0;font-size:0.9rem;font-weight:800}
+    .a-drawer-search{padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .a-drawer-search input{width:100%;padding:9px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:0.85rem;outline:none}
+    .a-plist{overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
+    .a-prow{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);transition:background 0.1s}
+    .a-prow.active{background:rgba(245,158,11,0.07);border-left:3px solid var(--accent)}
+    .a-prow-av{width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0}
+    .a-prow-av-fb{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;flex-shrink:0}
+    .a-prow-name{font-size:0.85rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .a-prow-meta{font-size:0.68rem;color:var(--text3)}
+    .a-start{padding:7px 14px;border-radius:8px;border:none;background:var(--accent);color:#000;font-size:0.75rem;font-weight:800;cursor:pointer;flex-shrink:0;transition:all 0.12s}
+    .a-start:active:not(:disabled){transform:scale(0.93)}
+    .a-start:disabled{opacity:0.35;cursor:not-allowed}
+
+    /* CONFIRM SHEET */
+    .a-confirm{position:fixed;inset:0;z-index:500;pointer-events:none;opacity:0;transition:opacity 0.15s;display:flex;align-items:flex-end}
+    .a-confirm.open{pointer-events:all;opacity:1}
+    .a-confirm-bg{position:absolute;inset:0;background:rgba(0,0,0,0.7)}
+    .a-confirm-panel{position:relative;z-index:1;width:100%;background:var(--bg);border-radius:18px 18px 0 0;padding:20px 16px 32px;animation:aup 0.2s ease}
+    .a-confirm-title{font-size:1rem;font-weight:800;margin-bottom:6px}
+    .a-confirm-sub{font-size:0.82rem;color:var(--text2);margin-bottom:20px}
+    .a-confirm-btns{display:flex;gap:8px}
+    .a-confirm-yes{flex:1;padding:14px;border-radius:12px;border:none;font-size:0.9rem;font-weight:800;cursor:pointer;transition:all 0.12s}
+    .a-confirm-yes:active{transform:scale(0.95)}
+    .a-confirm-no{flex:1;padding:14px;border-radius:12px;border:1.5px solid var(--border);background:var(--bg3);color:var(--text2);font-size:0.9rem;font-weight:700;cursor:pointer;transition:all 0.12s}
+    .a-confirm-no:active{transform:scale(0.95)}
+
+    /* NO AUCTION */
+    .a-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:60px 24px;text-align:center;flex:1}
+    .a-empty-icon{font-size:3rem}
+    .a-empty-title{font-size:1.2rem;font-weight:800;color:var(--text2)}
+    .a-empty-sub{font-size:0.82rem;color:var(--text3)}
+    .a-open-queue{padding:12px 24px;border-radius:12px;border:none;background:var(--accent);color:#000;font-size:0.85rem;font-weight:800;cursor:pointer;margin-top:4px;transition:all 0.12s}
+    .a-open-queue:active{transform:scale(0.95)}
   `;
 
-  const PlayerQueue = () => (
-    <>
-      <div className="sidebar-header">
-        <h3>Player Queue</h3>
-        <span style={{ fontSize: '0.78rem', color: 'var(--text3)', background: 'var(--bg3)', padding: '2px 10px', borderRadius: 20, border: '1px solid var(--border)' }}>
-          {availablePlayers.length} left
-        </span>
-      </div>
-      <div className="sidebar-search">
-        <input className="form-control" placeholder="Search players..." value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ fontSize: '0.85rem', padding: '8px 12px' }} />
-      </div>
-      <div className="player-list">
-        {filteredAvailable.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text3)' }}>
-            <div style={{ fontSize: '2rem', marginBottom: 8 }}>🎉</div>
-            <div style={{ fontSize: '0.85rem' }}>All players auctioned!</div>
+  const initials = (name = '') => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+  const Confirm = () => {
+    if (!confirmAction) return null;
+    const colors = {
+      sold: { yes: '#16d975', text: '#000' },
+      unsold: { yes: 'rgba(240,74,74,0.8)', text: '#fff' },
+    };
+    const c = colors[confirmAction.type] || { yes: 'var(--accent)', text: '#000' };
+    return (
+      <div className={`a-confirm open`}>
+        <div className="a-confirm-bg" onClick={() => setConfirmAction(null)} />
+        <div className="a-confirm-panel">
+          <div className="a-confirm-title">{confirmAction.label}</div>
+          <div className="a-confirm-sub">
+            {confirmAction.type === 'sold'
+              ? `${currentAuction?.player?.name} → ${currentAuction?.currentBidTeamName} for ${formatCurrency(currentAuction?.currentBid)}`
+              : `${currentAuction?.player?.name} will be marked as unsold`
+            }
           </div>
-        ) : filteredAvailable.map(p => {
-          const rc = ROLE_COLORS[p.role] || '#666';
-          const isActive = currentAuction?.player?._id === p._id;
-          return (
-            <div key={p._id} className={`player-row${isActive ? ' active' : ''}`}>
-              {p.imageUrl
-                ? <img src={p.imageUrl} alt={p.name} className="player-row-av" />
-                : <div className="player-row-av-fb" style={{ background: `${rc}22`, color: rc }}>
-                    {p.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
-                  </div>
-              }
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="player-row-name">{p.name}</div>
-                <div className="player-row-meta">{p.role} · {formatCurrency(p.basePrice)}</div>
-              </div>
-              {isActive
-                ? <span style={{ fontSize: '0.62rem', background: 'var(--accent)', color: '#000', padding: '2px 8px', borderRadius: 10, fontWeight: 800, flexShrink: 0 }}>LIVE</span>
-                : <button className="start-btn" disabled={!!currentAuction || loading} onClick={() => handleStart(p._id)}>▶ Start</button>
-              }
-            </div>
-          );
-        })}
+          <div className="a-confirm-btns">
+            <button className="a-confirm-no" onClick={() => setConfirmAction(null)}>Cancel</button>
+            <button className="a-confirm-yes" style={{ background: c.yes, color: c.text }}
+              disabled={loading} onClick={confirmAction.fn}>
+              {loading ? 'Processing...' : 'Confirm'}
+            </button>
+          </div>
+        </div>
       </div>
-    </>
-  );
+    );
+  };
 
   return (
     <>
       <style>{css}</style>
-      <div className="auc-wrap">
+      <div className="a-root">
 
         {/* Top bar */}
-        <div className="auc-topbar">
-          <div>
-            <h1>🏏 Live Auction</h1>
-            <p>{activeEvent ? activeEvent.name : 'No auction selected'}</p>
+        <div className="a-topbar">
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="a-topbar-title">🏏 {activeEvent?.name || 'Live Auction'}</div>
+            {currentAuction && (
+              <div className="a-topbar-sub">
+                {isPaused ? '⏸ Paused' : '🔴 Live'} · {availablePlayers.length} players left
+              </div>
+            )}
           </div>
-          {!activeEvent && (
-            <div style={{ padding: '8px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: '0.78rem', color: 'var(--red)' }}>
-              ⚠️ Select an auction first
-            </div>
-          )}
+          <button className="a-queue-btn" onClick={() => setShowQueue(true)}>
+            📋 Queue
+            {availablePlayers.length > 0 && (
+              <span style={{ background: '#f04a4a', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: '0.65rem', fontWeight: 800 }}>
+                {availablePlayers.length}
+              </span>
+            )}
+          </button>
         </div>
 
-        <div className="auc-body">
-          {/* Main panel */}
-          <div className="auc-main">
-            {currentAuction ? (
-              <>
-                {/* Player hero */}
-                <div className="player-hero">
-                  <div className="status-badge" style={{ background: `${roleColor}18`, color: roleColor, border: `1px solid ${roleColor}40` }}>
-                    {isPaused ? <span>⏸</span> : <span className="live-dot" />}
-                    {isPaused ? 'Paused' : 'Live'} · {currentAuction.player?.role}
-                  </div>
-                  <div className="player-hero-inner">
-                    {currentAuction.player?.imageUrl
-                      ? <img src={currentAuction.player.imageUrl} alt={currentAuction.player.name} className="player-avatar" style={{ borderColor: roleColor }} />
-                      : <div className="player-avatar-fb" style={{ background: `${roleColor}22`, color: roleColor, borderColor: roleColor }}>
-                          {currentAuction.player?.name?.split(' ').map(w => w[0]).join('').slice(0, 2)}
-                        </div>
-                    }
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="player-name">{currentAuction.player?.name}</div>
-                      <div className="player-meta">
-                        {[currentAuction.player?.battingStyle, currentAuction.player?.nationality, currentAuction.player?.age && `Age ${currentAuction.player.age}`].filter(Boolean).join(' · ')}
+        {currentAuction ? (
+          <>
+            <div className="a-scroll">
+              {/* Player */}
+              <div className="a-player">
+                <div className="a-badge" style={{ background: `${roleColor}18`, color: roleColor, border: `1px solid ${roleColor}35` }}>
+                  {isPaused ? '⏸' : <span className="a-live-dot" />}
+                  {isPaused ? 'Paused' : 'Live'} · {currentAuction.player?.role}
+                </div>
+                <div className="a-player-top">
+                  {currentAuction.player?.imageUrl
+                    ? <img src={currentAuction.player.imageUrl} alt="" className="a-avatar" style={{ borderColor: roleColor }} />
+                    : <div className="a-avatar-fb" style={{ background: `${roleColor}18`, color: roleColor, borderColor: roleColor }}>
+                        {initials(currentAuction.player?.name)}
                       </div>
-                      {currentAuction.player?.stats && (
-                        <div className="player-stats">
-                          {currentAuction.player.stats.runs > 0 && <span className="player-stat" style={{ color: '#38d9f5' }}>🏏 {currentAuction.player.stats.runs}R</span>}
-                          {currentAuction.player.stats.average > 0 && <span className="player-stat" style={{ color: '#ffe066' }}>Avg {currentAuction.player.stats.average}</span>}
-                          {currentAuction.player.stats.wickets > 0 && <span className="player-stat" style={{ color: '#f04a4a' }}>🎯 {currentAuction.player.stats.wickets}W</span>}
-                          {currentAuction.player.stats.matches > 0 && <span className="player-stat" style={{ color: 'var(--text3)' }}>🏟 {currentAuction.player.stats.matches}M</span>}
-                        </div>
-                      )}
+                  }
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="a-player-name">{currentAuction.player?.name}</div>
+                    <div className="a-player-meta">
+                      {[currentAuction.player?.battingStyle, currentAuction.player?.nationality, currentAuction.player?.age && `Age ${currentAuction.player.age}`].filter(Boolean).join(' · ')}
                     </div>
+                    {currentAuction.player?.stats && (
+                      <div className="a-stats">
+                        {currentAuction.player.stats.runs > 0 && <span className="a-stat" style={{ color: '#38d9f5' }}>🏏 {currentAuction.player.stats.runs}R</span>}
+                        {currentAuction.player.stats.average > 0 && <span className="a-stat" style={{ color: '#ffe066' }}>Avg {currentAuction.player.stats.average}</span>}
+                        {currentAuction.player.stats.wickets > 0 && <span className="a-stat" style={{ color: '#f04a4a' }}>🎯 {currentAuction.player.stats.wickets}W</span>}
+                      </div>
+                    )}
                   </div>
                 </div>
+              </div>
 
-                {/* Current bid display */}
-                <div className="bid-display">
-                  <div>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 2 }}>Current Bid</div>
-                    <div className={`bid-amount${bidFlash ? ' flash' : ''}`} style={{ color: currentAuction.currentBidTeam ? '#16d975' : 'var(--text3)' }}>
-                      {formatCurrency(currentAuction.currentBid)}
-                    </div>
-                    {currentAuction.currentBidTeamName
-                      ? <div className="bid-team" style={{ color: 'var(--accent2)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                          {currentAuction.currentBidTeam?.logo
-                            ? <img src={currentAuction.currentBidTeam.logo} alt="" style={{ width: 16, height: 16, borderRadius: 3, objectFit: 'cover' }} />
-                            : <span style={{ width: 8, height: 8, borderRadius: '50%', background: currentAuction.currentBidTeam?.color, display: 'inline-block' }} />
-                          }
-                          {currentAuction.currentBidTeamName}
-                        </div>
-                      : <div className="bid-team" style={{ color: 'var(--text3)' }}>Base Price · Awaiting bids</div>
-                    }
+              {/* Bid */}
+              <div className="a-bid">
+                <div>
+                  <div className="a-bid-label">Current Bid</div>
+                  <div className={`a-bid-amount${bidFlash ? ' flash' : ''}`} style={{ color: hasBid ? '#16d975' : 'var(--text3)' }}>
+                    {formatCurrency(currentAuction.currentBid)}
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div className="bid-count">{currentAuction.bids.length} bid{currentAuction.bids.length !== 1 ? 's' : ''}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text3)', marginTop: 2 }}>
-                      Base: {formatCurrency(currentAuction.basePrice)}
-                    </div>
+                  <div className="a-bid-team" style={{ color: hasBid ? 'var(--accent2, #f5a623)' : 'var(--text3)' }}>
+                    {hasBid ? (
+                      <>
+                        {currentAuction.currentBidTeam?.logo
+                          ? <img src={currentAuction.currentBidTeam.logo} alt="" style={{ width: 14, height: 14, borderRadius: 3, objectFit: 'cover' }} />
+                          : <span style={{ width: 7, height: 7, borderRadius: '50%', background: currentAuction.currentBidTeam?.color, display: 'inline-block' }} />
+                        }
+                        {currentAuction.currentBidTeamName}
+                      </>
+                    ) : 'Awaiting bids'}
                   </div>
                 </div>
-
-                {/* Team selector */}
-                <div style={{ padding: '14px 16px 0', borderBottom: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: 8 }}>Select Bidding Team</div>
-                  <div className="team-grid">
-                    {teams.map(t => {
-                      const tRemainingSlots = t.maxPlayers - t.players.length;
-                      const tReserved = (tRemainingSlots - 1) * (activeEvent?.defaultBasePrice || 0);
-                      const tEffMax = t.remainingBudget - tReserved;
-                      const cantAfford = tEffMax < nextBase + increments[0];
-                      return (
-                        <button key={t._id} className={`team-btn${selectedTeam === t._id ? ' selected' : ''}`}
-                          disabled={isPaused}
-                          onClick={() => setSelectedTeam(selectedTeam === t._id ? '' : t._id)}>
-                          {t.logo
-                            ? <img src={t.logo} alt={t.name} style={{ width: 24, height: 24, borderRadius: 4, objectFit: 'cover' }} />
-                            : <div style={{ width: 10, height: 10, borderRadius: '50%', background: t.color }} />
-                          }
-                          <div className="team-btn-name">{t.shortName}</div>
-                          <div className="team-btn-budget" style={{ color: cantAfford ? '#f04a4a' : 'var(--text3)' }}>
-                            {formatCurrency(t.remainingBudget)}
-                          </div>
-                          {cantAfford && <div className="team-btn-warn">Low budget</div>}
-                          {selectedTeam === t._id && (
-                            <div style={{ position: 'absolute', top: 4, right: 4, width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)' }} />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Budget warning */}
-                  {selectedTeamData && (
-                    <div className="budget-bar" style={{
-                      background: effectiveMaxBid < nextBase + increments[0] ? 'rgba(240,74,74,0.08)' : 'rgba(22,217,117,0.06)',
-                      border: `1px solid ${effectiveMaxBid < nextBase + increments[0] ? 'rgba(240,74,74,0.25)' : 'rgba(22,217,117,0.2)'}`,
-                      color: effectiveMaxBid < nextBase + increments[0] ? '#f87171' : '#16d975',
-                    }}>
-                      <div className="budget-bar-row">
-                        <span style={{ fontWeight: 700 }}>{selectedTeamData.name}</span>
-                        <span style={{ fontWeight: 700 }}>{formatCurrency(selectedTeamData.remainingBudget)} left</span>
-                      </div>
-                      <div className="budget-bar-row" style={{ fontSize: '0.72rem', opacity: 0.8 }}>
-                        <span>Max bid: <strong>{formatCurrency(Math.max(0, effectiveMaxBid))}</strong></span>
-                        {reservedBudget > 0 && (
-                          <span>Reserve {formatCurrency(reservedBudget)} for {remainingSlots - 1} slots</span>
-                        )}
-                      </div>
-                      {/* Budget progress bar */}
-                      <div style={{ marginTop: 6, height: 3, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
-                        <div style={{
-                          height: '100%', borderRadius: 2,
-                          width: `${Math.min(100, (selectedTeamData.remainingBudget / selectedTeamData.budget) * 100)}%`,
-                          background: effectiveMaxBid < nextBase + increments[0] ? '#f04a4a' : '#16d975',
-                          transition: 'width 0.4s ease',
-                        }} />
-                      </div>
-                    </div>
+                <div className="a-bid-right">
+                  <div className="a-bid-count">{currentAuction.bids.length} bid{currentAuction.bids.length !== 1 ? 's' : ''}</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text3)', marginTop: 2 }}>Base {formatCurrency(currentAuction.basePrice)}</div>
+                  {currentAuction.bids.length > 0 && (
+                    <button onClick={() => setShowHistory(true)}
+                      style={{ marginTop: 6, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: '0.65rem', cursor: 'pointer' }}>
+                      View History
+                    </button>
                   )}
                 </div>
+              </div>
 
-                {/* Quick bids */}
-                {!isPaused && (
-                  <div className="quick-bids" style={{ paddingTop: 14 }}>
-                    <div className="quick-bids-label">Quick Bid</div>
-                    <div className="quick-bid-grid">
+              {/* Teams */}
+              <div className="a-section-label">Select Team</div>
+              <div className="a-teams">
+                {teams.map(t => {
+                  const tSlots = t.maxPlayers - t.players.length;
+                  const tReserved = (tSlots - 1) * (activeEvent?.defaultBasePrice || 0);
+                  const tMax = t.remainingBudget - tReserved;
+                  const cantAfford = tMax < nextBase + increments[0];
+                  const isSel = selectedTeam === t._id;
+                  return (
+                    <button key={t._id} className={`a-team${isSel ? ' sel' : ''}`}
+                      disabled={isPaused}
+                      onClick={() => setSelectedTeam(isSel ? '' : t._id)}>
+                      {t.logo
+                        ? <img src={t.logo} alt={t.name} className="a-team-logo" />
+                        : <div className="a-team-dot" style={{ background: t.color }} />
+                      }
+                      <div className="a-team-name">{t.shortName}</div>
+                      <div className="a-team-budget" style={{ color: cantAfford ? '#f04a4a' : 'var(--text3)' }}>{formatCurrency(t.remainingBudget)}</div>
+                      {cantAfford && <div className="a-team-warn">Low</div>}
+                      {isSel && <div className="a-team-check" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Budget info */}
+              {selectedTeamData && (
+                <div className="a-budget" style={{
+                  background: effectiveMaxBid < nextBase + increments[0] ? 'rgba(240,74,74,0.07)' : 'rgba(22,217,117,0.06)',
+                  border: `1px solid ${effectiveMaxBid < nextBase + increments[0] ? 'rgba(240,74,74,0.2)' : 'rgba(22,217,117,0.18)'}`,
+                  color: effectiveMaxBid < nextBase + increments[0] ? '#f87171' : '#16d975',
+                }}>
+                  <div className="a-budget-row">
+                    <span style={{ fontWeight: 700 }}>{selectedTeamData.shortName} · Max bid</span>
+                    <span style={{ fontWeight: 800 }}>{formatCurrency(Math.max(0, effectiveMaxBid))}</span>
+                  </div>
+                  {reservedBudget > 0 && (
+                    <div className="a-budget-row" style={{ fontSize: '0.65rem', opacity: 0.75 }}>
+                      <span>Reserve {formatCurrency(reservedBudget)} for {remainingSlots - 1} slots</span>
+                      <span>{formatCurrency(selectedTeamData.remainingBudget)} total left</span>
+                    </div>
+                  )}
+                  <div className="a-budget-bar">
+                    <div className="a-budget-fill" style={{
+                      width: `${Math.min(100, (selectedTeamData.remainingBudget / selectedTeamData.budget) * 100)}%`,
+                      background: effectiveMaxBid < nextBase + increments[0] ? '#f04a4a' : '#16d975',
+                    }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Quick bids */}
+              {!isPaused && (
+                <>
+                  <div className="a-section-label">Quick Bid</div>
+                  <div className="a-quick">
+                    <div className="a-quick-grid">
                       {increments.map(inc => {
-                        const bidAmount = nextBase + inc;
-                        const canAfford = selectedTeamData ? bidAmount <= effectiveMaxBid : true;
+                        const amt = nextBase + inc;
+                        const ok = selectedTeamData ? amt <= effectiveMaxBid : true;
                         return (
-                          <button key={inc} className="quick-bid-btn"
-                            disabled={!selectedTeam || loading || !canAfford}
-                            onClick={() => handleBid(bidAmount)}>
-                            <span className="inc" style={{ color: canAfford ? 'var(--accent)' : '#f04a4a' }}>+{formatCurrency(inc)}</span>
-                            <span className="total">{formatCurrency(bidAmount)}</span>
-                            {!canAfford && <span className="over">Over budget</span>}
+                          <button key={inc} className="a-qbtn"
+                            disabled={!selectedTeam || loading || !ok}
+                            onClick={() => handleBid(amt)}
+                            style={{ borderColor: !ok ? 'rgba(240,74,74,0.2)' : undefined }}>
+                            <span className="a-qbtn-inc" style={{ color: ok ? 'var(--accent)' : '#f04a4a' }}>+{formatCurrency(inc)}</span>
+                            <span className="a-qbtn-total">{formatCurrency(amt)}</span>
+                            {!ok && <span className="a-qbtn-over">Over budget</span>}
                           </button>
                         );
                       })}
                     </div>
-
-                    <div className="custom-bid-row">
-                      <input type="number" className="form-control"
-                        placeholder={`Custom (min ${formatCurrency(nextBase + 1)})`}
-                        value={customBid} onChange={e => setCustomBid(e.target.value)}
-                        style={{
-                          fontSize: '0.85rem',
-                          borderColor: customBid && selectedTeamData && Number(customBid) > effectiveMaxBid
-                            ? 'rgba(240,74,74,0.5)' : undefined,
-                        }} />
-                      <button className="btn btn-primary"
-                        disabled={!selectedTeam || !customBid || loading || (selectedTeamData && Number(customBid) > effectiveMaxBid)}
-                        onClick={() => { handleBid(Number(customBid)); setCustomBid(''); }}
-                        style={{ flexShrink: 0, padding: '0 18px', fontWeight: 700 }}>
-                        Bid
-                      </button>
-                    </div>
-                    {customBid && selectedTeamData && Number(customBid) > effectiveMaxBid && (
-                      <div style={{ marginTop: 6, fontSize: '0.75rem', color: '#f87171' }}>
-                        ⚠️ Max allowed: {formatCurrency(effectiveMaxBid)} — must reserve {formatCurrency(reservedBudget)} for {remainingSlots - 1} slots
-                      </div>
-                    )}
                   </div>
-                )}
 
-                {/* Action controls */}
-                <div className="controls">
-                  <button className="btn btn-sold"
-                    disabled={!currentAuction.currentBidTeam || loading} onClick={handleSold}>
-                    🔨 SOLD
-                  </button>
-                  <button className="btn btn-unsold" disabled={loading} onClick={handleUnsold}>
-                    ❌ UNSOLD
-                  </button>
-                  <button className="btn btn-pause" disabled={loading} onClick={handlePause}>
-                    {isPaused ? '▶ Resume' : '⏸ Pause'}
-                  </button>
-                  <button className="btn btn-undo" disabled={loading || currentAuction.bids.length === 0} onClick={handleUndo}>
-                    ↩ Undo
-                  </button>
+                  {/* Custom bid */}
+                  <div className="a-section-label">Custom Bid</div>
+                  <div className="a-custom">
+                    <input type="number" inputMode="numeric" placeholder={`Min ${formatCurrency(nextBase + 1)}`}
+                      value={customBid} onChange={e => setCustomBid(e.target.value)}
+                      style={{ borderColor: customBid && selectedTeamData && Number(customBid) > effectiveMaxBid ? 'rgba(240,74,74,0.5)' : undefined }} />
+                    <button className="a-custom-btn"
+                      disabled={!selectedTeam || !customBid || loading || (selectedTeamData && Number(customBid) > effectiveMaxBid)}
+                      onClick={() => { handleBid(Number(customBid)); setCustomBid(''); }}>
+                      Bid
+                    </button>
+                  </div>
+                  {customBid && selectedTeamData && Number(customBid) > effectiveMaxBid && (
+                    <div className="a-custom-warn">
+                      ⚠️ Max: {formatCurrency(effectiveMaxBid)} · Reserve {formatCurrency(reservedBudget)} for {remainingSlots - 1} slots
+                    </div>
+                  )}
+                  <div style={{ height: 12 }} />
+                </>
+              )}
+            </div>
+
+            {/* Sticky controls */}
+            <div className="a-controls">
+              <button className={`a-ctrl sold`}
+                disabled={!hasBid || loading}
+                onClick={() => setConfirmAction({ type: 'sold', label: '🔨 Confirm Sale', fn: handleSold })}>
+                🔨 SOLD — {hasBid ? formatCurrency(currentAuction.currentBid) : 'No bids'}
+              </button>
+              <button className="a-ctrl unsold" disabled={loading}
+                onClick={() => setConfirmAction({ type: 'unsold', label: '❌ Mark Unsold?', fn: handleUnsold })}>
+                ❌ Unsold
+              </button>
+              <button className="a-ctrl pause" disabled={loading} onClick={handlePause}>
+                {isPaused ? '▶ Resume' : '⏸ Pause'}
+              </button>
+              <button className="a-ctrl undo" disabled={loading || currentAuction.bids.length === 0} onClick={handleUndo}>
+                ↩ Undo Bid
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="a-empty">
+            <div className="a-empty-icon">🏏</div>
+            <div className="a-empty-title">No Active Auction</div>
+            <div className="a-empty-sub">Pick a player from the queue to start bidding</div>
+            <button className="a-open-queue" onClick={() => setShowQueue(true)}>📋 Open Player Queue</button>
+          </div>
+        )}
+
+        {/* Bid history sheet */}
+        <div className={`a-sheet${showHistory ? ' open' : ''}`}>
+          <div className="a-sheet-bg" onClick={() => setShowHistory(false)} />
+          <div className="a-sheet-panel">
+            <div className="a-sheet-handle" />
+            <div className="a-sheet-title">
+              <span>Bid History</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text3)' }}>{currentAuction?.bids?.length || 0} bids</span>
+            </div>
+            <div className="a-sheet-body">
+              {[...(currentAuction?.bids || [])].reverse().map((b, i) => (
+                <div key={i} className="a-hist-row" style={{ background: i === 0 ? 'rgba(22,217,117,0.04)' : undefined }}>
+                  <span style={{ color: i === 0 ? '#16d975' : 'var(--text2)', fontWeight: i === 0 ? 700 : 400 }}>
+                    {i === 0 ? '🏆 ' : ''}{b.teamName}
+                  </span>
+                  <span style={{ fontWeight: 700, color: i === 0 ? '#16d975' : 'var(--text)' }}>{formatCurrency(b.amount)}</span>
                 </div>
-
-                {/* Bid history */}
-                {currentAuction.bids.length > 0 && (
-                  <div className="bid-history">
-                    <div className="bid-history-header">
-                      <span>Bid History</span>
-                      <span>{currentAuction.bids.length} bids</span>
-                    </div>
-                    <div style={{ maxHeight: 180, overflowY: 'auto' }}>
-                      {[...currentAuction.bids].reverse().map((b, i) => (
-                        <div key={i} className="bid-row" style={{ background: i === 0 ? 'rgba(22,217,117,0.04)' : undefined }}>
-                          <span style={{ color: i === 0 ? '#16d975' : 'var(--text2)', fontWeight: i === 0 ? 700 : 400, display: 'flex', alignItems: 'center', gap: 6 }}>
-                            {i === 0 && <span>🏆</span>} {b.teamName}
-                          </span>
-                          <span style={{ fontWeight: 600, color: i === 0 ? '#16d975' : 'var(--text)' }}>{formatCurrency(b.amount)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="no-auction">
-                <div style={{ fontSize: '3rem' }}>🏏</div>
-                <h2 style={{ color: 'var(--text2)', margin: 0 }}>No Active Auction</h2>
-                <p style={{ color: 'var(--text3)', margin: 0, fontSize: '0.85rem' }}>Select a player from the queue to start bidding</p>
-                <button className="btn btn-primary" style={{ marginTop: 8 }} onClick={() => setShowQueue(true)}>
-                  📋 Open Player Queue
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Desktop sidebar */}
-          <div className="auc-sidebar">
-            <PlayerQueue />
-          </div>
-        </div>
-
-        {/* Mobile FAB */}
-        <button className="queue-fab" onClick={() => setShowQueue(true)}>
-          📋
-          {availablePlayers.length > 0 && (
-            <span style={{ position: 'absolute', top: 4, right: 4, width: 16, height: 16, borderRadius: '50%', background: '#f04a4a', fontSize: '0.6rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {availablePlayers.length}
-            </span>
-          )}
-        </button>
-
-        {/* Mobile queue drawer */}
-        <div className={`queue-drawer${showQueue ? ' open' : ''}`}>
-          <div className="queue-drawer-bg" onClick={() => setShowQueue(false)} />
-          <div className="queue-drawer-panel">
-            <div className="queue-drawer-handle" />
-            <div style={{ display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0 }}>
-              <PlayerQueue />
+              ))}
             </div>
           </div>
         </div>
+
+        {/* Player queue drawer */}
+        <div className={`a-drawer${showQueue ? ' open' : ''}`}>
+          <div className="a-drawer-bg" onClick={() => setShowQueue(false)} />
+          <div className="a-drawer-panel">
+            <div className="a-drawer-handle" />
+            <div className="a-drawer-header">
+              <h3>Player Queue</h3>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text3)', background: 'var(--bg3)', padding: '2px 10px', borderRadius: 20, border: '1px solid var(--border)' }}>
+                {availablePlayers.length} left
+              </span>
+            </div>
+            <div className="a-drawer-search">
+              <input placeholder="Search players..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <div className="a-plist">
+              {filteredAvailable.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text3)' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: 8 }}>🎉</div>
+                  <div style={{ fontSize: '0.85rem' }}>All players auctioned!</div>
+                </div>
+              ) : filteredAvailable.map(p => {
+                const rc = ROLE_COLORS[p.role] || '#666';
+                const isActive = currentAuction?.player?._id === p._id;
+                return (
+                  <div key={p._id} className={`a-prow${isActive ? ' active' : ''}`}>
+                    {p.imageUrl
+                      ? <img src={p.imageUrl} alt={p.name} className="a-prow-av" />
+                      : <div className="a-prow-av-fb" style={{ background: `${rc}18`, color: rc }}>{initials(p.name)}</div>
+                    }
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="a-prow-name">{p.name}</div>
+                      <div className="a-prow-meta">{p.role} · {formatCurrency(p.basePrice)}</div>
+                    </div>
+                    {isActive
+                      ? <span style={{ fontSize: '0.6rem', background: 'var(--accent)', color: '#000', padding: '2px 8px', borderRadius: 8, fontWeight: 800, flexShrink: 0 }}>LIVE</span>
+                      : <button className="a-start" disabled={!!currentAuction || loading} onClick={() => handleStart(p._id)}>▶ Start</button>
+                    }
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Confirm dialog */}
+        <Confirm />
       </div>
     </>
   );
