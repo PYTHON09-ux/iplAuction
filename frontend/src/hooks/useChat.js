@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 
-const CHAT_URL = import.meta.env.VITE_CHAT_URL || 'http://localhost:4000';
+const CHAT_URL = import.meta.env.VITE_CHAT_URL || 'https://iplauction-production-ee83.up.railway.app';
 
 const GUEST_COLORS = [
     '#38d9f5', '#16d975', '#f5a623', '#c084fc',
