@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { api, formatCurrency, ROLE_COLORS } from '../utils/api';
-import ChatPanel from './ChatPanel';
+import ChatPanel from '../components/ChatPanel.jsx';
 
 /* ── confetti helper ── */
 function spawnConfetti(container) {
