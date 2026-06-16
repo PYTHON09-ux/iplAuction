@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from 'react';
 import { api, formatCurrency, ROLE_COLORS } from '../utils/api';
 import ChatPanel from '../components/ChatPanel.jsx';
 
-/* ── confetti helper ── */
 function spawnConfetti(container) {
   const colors = ['#ffe066', '#16d975', '#38d9f5', '#f5a623', '#f04a4a', '#c084fc', '#fff'];
   for (let i = 0; i < 120; i++) {
@@ -30,26 +29,25 @@ const CSS = `
     --green:#16d975;--red:#f04a4a;--amber:#f5a623;--gold:#ffe066;--cyan:#38d9f5;
     --disp:'Barlow Condensed',sans-serif;--body:'Barlow',sans-serif;
     --radius:16px;--radius-sm:10px;
+    --sab:env(safe-area-inset-bottom, 0px);
   }
   body{background:var(--bg);color:var(--text);font-family:var(--body);-webkit-font-smoothing:antialiased}
   .vp{height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
-  /* ── ANIMATIONS ── */
   @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.72)}}
   @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}80%{opacity:1}100%{transform:translateY(700px) rotate(720deg);opacity:0}}
   @keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes scaleIn{from{transform:scale(.82);opacity:0}to{transform:scale(1);opacity:1}}
-  @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
   @keyframes bidFlash{0%{background:rgba(22,217,117,0.22)}100%{background:transparent}}
   @keyframes slideUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
   @keyframes rotateIn{from{opacity:0;transform:rotate(-6deg) scale(.9)}to{opacity:1;transform:rotate(0deg) scale(1)}}
   @keyframes amountCount{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
-  @keyframes lineSweep{0%{width:0}100%{width:100%}}
   @keyframes idleDrift{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
   @keyframes badgePop{0%{transform:scale(0.7);opacity:0}70%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+  @keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  @keyframes backdropIn{from{opacity:0}to{opacity:1}}
 
-  /* HEADER */
   .vp-header{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--bg2);border-bottom:1px solid var(--border);gap:12px;flex-shrink:0}
   .vp-header-left{display:flex;align-items:center;gap:12px}
   .vp-event-logo{width:36px;height:36px;border-radius:8px;object-fit:cover;border:1px solid var(--border2)}
@@ -60,130 +58,47 @@ const CSS = `
   .vp-live-dot{width:7px;height:7px;border-radius:50%;background:#f04a4a;animation:pulse 1.1s ease-in-out infinite}
   .vp-updated{font-size:11px;color:var(--text3)}
 
-  /* STAT STRIP */
   .vp-strip{display:flex;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0}
   .vp-strip-item{flex:1;padding:8px 6px;text-align:center;border-right:1px solid var(--border)}
   .vp-strip-item:last-child{border-right:none}
   .vp-strip-val{font-family:var(--disp);font-size:clamp(1.1rem,2.8vw,1.8rem);font-weight:800;line-height:1}
   .vp-strip-label{font-size:clamp(9px,1.3vw,11px);color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
 
-  /* MAIN */
   .vp-main{flex:1;display:grid;grid-template-columns:1fr 310px;min-height:0}
-
-  /* CENTER */
   .vp-center{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;position:relative}
   .vp-center.fullscreen{position:fixed;inset:0;z-index:8000;border-right:none;background:var(--bg)}
 
-  /* Fullscreen button */
-  .vp-fs-btn{
-    position:absolute;top:12px;right:12px;z-index:100;
-    display:flex;align-items:center;gap:6px;
-    padding:6px 14px;
-    background:rgba(6,9,15,0.7);border:1px solid var(--border2);
-    border-radius:8px;cursor:pointer;
-    font-size:12px;font-weight:600;color:var(--text2);
-    backdrop-filter:blur(6px);
-    transition:color .15s,border-color .15s;
-    user-select:none;
-  }
+  .vp-fs-btn{position:absolute;top:12px;right:12px;z-index:100;display:flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(6,9,15,0.7);border:1px solid var(--border2);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);backdrop-filter:blur(6px);transition:color .15s,border-color .15s;user-select:none;min-height:44px;-webkit-tap-highlight-color:transparent}
   .vp-fs-btn:hover{color:var(--text);border-color:rgba(255,255,255,0.3)}
   .vp-fs-btn svg{width:14px;height:14px;flex-shrink:0}
 
-  /* Player card */
   .vp-player-card{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;animation:fadeIn .4s ease}
+  .vp-img-zone{flex:1;position:relative;display:flex;align-items:center;justify-content:center;min-height:0;overflow:hidden;transition:background 0.6s ease}
+  .vp-img-zone img{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;object-position:center bottom;display:block;position:relative;z-index:1;animation:slideUp .5s cubic-bezier(.22,1,.36,1)}
+  .vp-img-bg-blur{position:absolute;inset:0;background-size:cover;background-position:center;filter:blur(28px) saturate(0.3);opacity:0.22;z-index:0;transform:scale(1.1)}
+  .vp-img-fallback-big{font-family:var(--disp);font-size:clamp(6rem,18vw,16rem);font-weight:900;opacity:.07;letter-spacing:.04em;z-index:1;position:relative;animation:rotateIn .5s ease}
 
-  /* IMAGE ZONE */
-  .vp-img-zone{
-    flex:1;position:relative;
-    display:flex;align-items:center;justify-content:center;
-    min-height:0;overflow:hidden;
-    transition:background 0.6s ease;
-  }
-  .vp-img-zone img{
-    max-width:100%;max-height:100%;width:100%;height:100%;
-    object-fit:contain;object-position:center bottom;
-    display:block;position:relative;z-index:1;
-    animation:slideUp .5s cubic-bezier(.22,1,.36,1);
-  }
-  .vp-img-bg-blur{
-    position:absolute;inset:0;background-size:cover;background-position:center;
-    filter:blur(28px) saturate(0.3);opacity:0.22;z-index:0;transform:scale(1.1);
-  }
-  .vp-img-fallback-big{
-    font-family:var(--disp);font-size:clamp(6rem,18vw,16rem);font-weight:900;
-    opacity:.07;letter-spacing:.04em;z-index:1;position:relative;
-    animation:rotateIn .5s ease;
-  }
-
-  /* Status overlay badge on image */
-  .vp-img-status-badge{
-    position:absolute;top:16px;left:16px;z-index:5;
-    display:flex;align-items:center;gap:8px;
-    padding:7px 16px;border-radius:100px;
-    font-family:var(--disp);font-size:clamp(11px,1.4vw,14px);font-weight:700;
-    letter-spacing:.1em;text-transform:uppercase;
-    backdrop-filter:blur(8px);
-    animation:badgePop .35s cubic-bezier(.34,1.56,.64,1);
-  }
+  .vp-img-status-badge{position:absolute;top:16px;left:16px;z-index:5;display:flex;align-items:center;gap:8px;padding:7px 16px;border-radius:100px;font-family:var(--disp);font-size:clamp(11px,1.4vw,14px);font-weight:700;letter-spacing:.1em;text-transform:uppercase;backdrop-filter:blur(8px);animation:badgePop .35s cubic-bezier(.34,1.56,.64,1)}
   .vp-img-status-badge.sold{background:rgba(22,217,117,0.18);border:1px solid rgba(22,217,117,0.4);color:#16d975}
   .vp-img-status-badge.unsold{background:rgba(240,74,74,0.15);border:1px solid rgba(240,74,74,0.3);color:#f04a4a}
   .vp-img-status-badge.live{background:rgba(240,74,74,0.15);border:1px solid rgba(240,74,74,0.3);color:#f87171}
 
-  /* ── TRANSITION SCREEN (between players) ── */
-  .vp-transition{
-    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    padding:40px 24px;text-align:center;background:var(--bg2);
-    animation:fadeIn .5s ease;
-    position:relative;overflow:hidden;
-  }
-  .vp-transition-pitch{
-    position:absolute;inset:0;opacity:0.04;
-    background:
-      radial-gradient(ellipse 60% 40% at 50% 60%, rgba(22,217,117,0.6) 0%, transparent 70%),
-      repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(22,217,117,0.15) 28px, rgba(22,217,117,0.15) 29px),
-      repeating-linear-gradient(90deg, transparent, transparent 28px, rgba(22,217,117,0.08) 28px, rgba(22,217,117,0.08) 29px);
-  }
-  .vp-transition-icon{
-    position:relative;z-index:1;
-    width:72px;height:72px;border-radius:50%;
-    display:flex;align-items:center;justify-content:center;
-    background:var(--bg3);border:1px solid var(--border2);
-    margin:0 auto 20px;
-    animation:idleDrift 3s ease-in-out infinite;
-  }
+  .vp-transition{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;background:var(--bg2);animation:fadeIn .5s ease;position:relative;overflow:hidden}
+  .vp-transition-pitch{position:absolute;inset:0;opacity:0.04;background:radial-gradient(ellipse 60% 40% at 50% 60%, rgba(22,217,117,0.6) 0%, transparent 70%),repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(22,217,117,0.15) 28px, rgba(22,217,117,0.15) 29px),repeating-linear-gradient(90deg, transparent, transparent 28px, rgba(22,217,117,0.08) 28px, rgba(22,217,117,0.08) 29px)}
+  .vp-transition-icon{position:relative;z-index:1;width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg3);border:1px solid var(--border2);margin:0 auto 20px;animation:idleDrift 3s ease-in-out infinite}
   .vp-transition-icon svg{width:32px;height:32px;color:var(--text3)}
   .vp-transition-title{font-family:var(--disp);font-size:clamp(1.4rem,4vw,2.2rem);font-weight:900;color:var(--text3);letter-spacing:.05em;margin-bottom:6px;position:relative;z-index:1}
   .vp-transition-sub{font-size:13px;color:var(--text3);position:relative;z-index:1}
-  .vp-transition-last{
-    margin-top:24px;padding:14px 22px;
-    background:var(--bg3);border:1px solid var(--border);
-    border-radius:var(--radius);position:relative;z-index:1;
-    animation:slideUp .4s .1s both ease;
-  }
+  .vp-transition-last{margin-top:24px;padding:14px 22px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);position:relative;z-index:1;animation:slideUp .4s .1s both ease}
   .vp-transition-last-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
   .vp-transition-last-name{font-weight:700;font-size:1rem;margin-bottom:3px}
   .vp-transition-last-price{color:var(--green);font-weight:700;font-size:.9rem}
 
-  /* ── FULLSCREEN OVERLAY ── */
-  .vp-fs-info-overlay{
-    position:absolute;bottom:0;left:0;right:0;z-index:5;
-    padding:clamp(16px,3vw,32px) clamp(18px,4vw,40px);
-    background:linear-gradient(to top, rgba(6,9,15,1) 0%, rgba(6,9,15,0.92) 55%, transparent 100%);
-    pointer-events:none;
-    animation:slideUp .45s ease;
-  }
-  .vp-fs-role-tag{
-    display:inline-block;padding:3px 14px;border-radius:100px;
-    font-size:clamp(10px,1.3vw,13px);font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-    margin-bottom:8px;
-  }
-  .vp-fs-name{
-    font-family:var(--disp);font-size:clamp(2.4rem,7vw,7rem);font-weight:900;
-    color:#fff;line-height:.95;letter-spacing:.02em;margin-bottom:6px;
-  }
+  .vp-fs-info-overlay{position:absolute;bottom:0;left:0;right:0;z-index:5;padding:clamp(16px,3vw,32px) clamp(18px,4vw,40px);background:linear-gradient(to top, rgba(6,9,15,1) 0%, rgba(6,9,15,0.92) 55%, transparent 100%);pointer-events:none;animation:slideUp .45s ease}
+  .vp-fs-role-tag{display:inline-block;padding:3px 14px;border-radius:100px;font-size:clamp(10px,1.3vw,13px);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+  .vp-fs-name{font-family:var(--disp);font-size:clamp(2.4rem,7vw,7rem);font-weight:900;color:#fff;line-height:.95;letter-spacing:.02em;margin-bottom:6px}
   .vp-fs-sub{font-size:clamp(12px,1.6vw,18px);color:rgba(255,255,255,0.5);letter-spacing:.03em;margin-bottom:14px}
   .vp-fs-bottom-row{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
-  .vp-fs-status-block{}
   .vp-fs-status-label{font-size:clamp(9px,1vw,12px);color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
   .vp-fs-status-amount{font-family:var(--disp);font-size:clamp(2rem,6vw,5.5rem);font-weight:900;line-height:1;animation:amountCount .35s ease}
   .vp-fs-status-team{display:flex;align-items:center;gap:10px;margin-top:8px}
@@ -191,13 +106,7 @@ const CSS = `
   .vp-fs-team-logo img{width:100%;height:100%;object-fit:cover}
   .vp-fs-team-name{font-family:var(--disp);font-size:clamp(1rem,2.5vw,2rem);font-weight:800;line-height:1}
   .vp-fs-team-budget{font-size:clamp(10px,1.2vw,14px);color:var(--text3);margin-top:3px}
-  .vp-fs-verdict-unsold{
-    display:inline-flex;align-items:center;gap:8px;
-    padding:8px 22px;border-radius:100px;
-    background:rgba(240,74,74,0.1);border:1px solid rgba(240,74,74,0.25);
-    font-size:clamp(12px,1.6vw,18px);font-weight:800;color:var(--red);
-    letter-spacing:.12em;text-transform:uppercase;
-  }
+  .vp-fs-verdict-unsold{display:inline-flex;align-items:center;gap:8px;padding:8px 22px;border-radius:100px;background:rgba(240,74,74,0.1);border:1px solid rgba(240,74,74,0.25);font-size:clamp(12px,1.6vw,18px);font-weight:800;color:var(--red);letter-spacing:.12em;text-transform:uppercase}
   .vp-fs-stats-row{display:flex;gap:clamp(6px,1.2vw,12px);flex-wrap:wrap}
   .vp-fs-stat{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:clamp(6px,1vw,10px) clamp(12px,2vw,20px);text-align:center}
   .vp-fs-stat-val{font-family:var(--disp);font-size:clamp(1.2rem,3vw,2.4rem);font-weight:900;line-height:1}
@@ -206,12 +115,7 @@ const CSS = `
   .vp-fs-bid-chip{padding:4px 12px;border-radius:100px;font-size:clamp(11px,1.2vw,13px);background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:var(--text3)}
   .vp-fs-bid-chip-top{background:rgba(22,217,117,0.1);border-color:rgba(22,217,117,0.3);color:var(--green);font-weight:600}
 
-  /* INFO BAR */
-  .vp-info-bar{
-    flex-shrink:0;background:var(--bg2);border-top:1px solid var(--border);
-    padding:14px 22px 16px;overflow-y:auto;max-height:46vh;
-    animation:fadeSlideIn .4s ease;
-  }
+  .vp-info-bar{flex-shrink:0;background:var(--bg2);border-top:1px solid var(--border);padding:14px 22px 16px;overflow-y:auto;max-height:46vh;animation:fadeSlideIn .4s ease}
   .vp-info-bar::-webkit-scrollbar{width:3px}
   .vp-info-bar::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
   .vp-info-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
@@ -221,7 +125,6 @@ const CSS = `
   .vp-bid-block{text-align:right;flex-shrink:0}
   .vp-bid-mini-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px}
   .vp-bid-amount-big{font-family:var(--disp);font-size:clamp(2rem,4.5vw,3.4rem);font-weight:900;line-height:1;transition:color .3s ease}
-  .vp-bid-amount-big.flash{animation:amountCount .3s ease}
   .vp-bid-team-mini{font-size:clamp(11px,1.4vw,13px);color:var(--text2);margin-top:4px;font-weight:600}
   .vp-bid-count-mini{font-size:11px;color:var(--text3);margin-top:2px}
   .vp-stats-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px;animation:fadeSlideIn .4s .1s both ease}
@@ -235,12 +138,7 @@ const CSS = `
   .vp-dchip{display:flex;align-items:center;gap:5px;padding:3px 9px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;font-size:clamp(10px,1.2vw,12px);color:var(--text2)}
   .vp-dchip svg{width:12px;height:12px;flex-shrink:0;opacity:.7}
 
-  /* ── ACQUIRED BAR ── */
-  .vp-acquired-bar{
-    display:flex;align-items:center;gap:12px;
-    padding:10px 14px;border-radius:10px;margin-bottom:10px;
-    animation:fadeSlideIn .4s ease;
-  }
+  .vp-acquired-bar{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;margin-bottom:10px;animation:fadeSlideIn .4s ease}
   .vp-acquired-bar-sold{background:rgba(22,217,117,0.08);border:1px solid rgba(22,217,117,0.2)}
   .vp-acquired-bar-unsold{background:rgba(240,74,74,0.08);border:1px solid rgba(240,74,74,0.18)}
   .vp-acq-team-logo{width:36px;height:36px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:800;color:#fff;font-size:.8rem;flex-shrink:0}
@@ -249,94 +147,48 @@ const CSS = `
   .vp-acq-name{font-weight:700;font-size:.95rem}
   .vp-acq-price{font-family:var(--disp);font-size:1.4rem;font-weight:900;margin-left:auto;flex-shrink:0}
 
-  /* ── POPUP ── */
-  .vp-popup-overlay{
-    position:fixed;inset:0;z-index:9999;
-    display:flex;align-items:center;justify-content:center;
-    padding:20px;overflow:hidden;
-    animation:fadeIn .2s ease;
-  }
-  .vp-popup-sold-bg{position:absolute;inset:0;background:rgba(0,0,0,0.9)}
-  .vp-popup-unsold-bg{position:absolute;inset:0;background:rgba(0,0,0,0.92)}
-  .vp-popup-card{
-    position:relative;z-index:2;width:100%;max-width:500px;
-    border-radius:24px;overflow:hidden;
-    animation:scaleIn .35s cubic-bezier(.34,1.56,.64,1);
-  }
-  .vp-popup-card-sold{background:#080f0a;border:1.5px solid rgba(22,217,117,0.3);box-shadow:0 0 80px rgba(22,217,117,0.1)}
-  .vp-popup-card-unsold{background:#0f0808;border:1.5px solid rgba(240,74,74,0.2)}
-
-  /* Accent line at top of popup */
+  /* POPUPS */
+  .vp-popup-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;padding:0;overflow:hidden;animation:fadeIn .2s ease}
+  .vp-popup-sold-bg{position:absolute;inset:0;background:rgba(0,0,0,0.88)}
+  .vp-popup-unsold-bg{position:absolute;inset:0;background:rgba(0,0,0,0.9)}
+  .vp-popup-card{position:relative;z-index:2;width:100%;max-width:500px;border-radius:24px 24px 0 0;overflow:hidden;animation:sheetUp .35s cubic-bezier(.22,1,.36,1);padding-bottom:calc(16px + var(--sab))}
+  .vp-popup-card-sold{background:#080f0a;border:1.5px solid rgba(22,217,117,0.3);border-bottom:none;box-shadow:0 0 80px rgba(22,217,117,0.1)}
+  .vp-popup-card-unsold{background:#0f0808;border:1.5px solid rgba(240,74,74,0.2);border-bottom:none}
   .vp-popup-accent-line{height:3px;width:100%}
   .vp-popup-accent-line.sold{background:linear-gradient(90deg,transparent,#16d975 40%,transparent)}
   .vp-popup-accent-line.unsold{background:linear-gradient(90deg,transparent,#f04a4a 40%,transparent)}
-
-  .vp-popup-img-wrap{position:relative;height:clamp(200px,35vh,300px);background:#080f0a;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+  .vp-popup-img-wrap{position:relative;height:clamp(160px,28vh,260px);background:#080f0a;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
   .vp-popup-img-wrap img{height:100%;width:100%;object-fit:contain;object-position:bottom center;position:relative;z-index:1;animation:slideUp .4s ease}
   .vp-popup-img-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:blur(24px) saturate(0.25);opacity:0.15;transform:scale(1.1);z-index:0}
   .vp-popup-img-grad-sold{position:absolute;inset:0;z-index:2;background:linear-gradient(to bottom,transparent 30%,rgba(8,15,10,0.97) 100%)}
   .vp-popup-img-grad-unsold{position:absolute;inset:0;z-index:2;background:linear-gradient(to bottom,transparent 30%,rgba(15,8,8,0.98) 100%)}
   .vp-popup-img-fallback{font-family:var(--disp);font-size:8rem;font-weight:900;opacity:.07;letter-spacing:.05em;position:relative;z-index:1;padding-bottom:10px}
-
-  .vp-popup-body{padding:16px 24px 22px;text-align:center}
-  .vp-popup-verdict-sold{
-    display:inline-flex;align-items:center;gap:8px;
-    padding:6px 20px;border-radius:100px;
-    background:rgba(22,217,117,0.1);border:1px solid rgba(22,217,117,0.3);
-    font-size:12px;font-weight:800;color:var(--green);letter-spacing:.15em;text-transform:uppercase;
-    margin-bottom:12px;animation:badgePop .3s ease;
-  }
-  .vp-popup-verdict-unsold{
-    display:inline-flex;align-items:center;gap:8px;
-    padding:6px 20px;border-radius:100px;
-    background:rgba(240,74,74,0.1);border:1px solid rgba(240,74,74,0.25);
-    font-size:12px;font-weight:800;color:var(--red);letter-spacing:.15em;text-transform:uppercase;
-    margin-bottom:12px;animation:badgePop .3s ease;
-  }
-  .vp-popup-player-name{font-family:var(--disp);font-size:clamp(1.8rem,4.5vw,2.8rem);font-weight:900;line-height:1;letter-spacing:.03em;margin-bottom:4px}
-  .vp-popup-player-meta{font-size:13px;color:var(--text2);margin-bottom:14px}
-
-  .vp-popup-price-box-sold{
-    background:rgba(22,217,117,0.07);border:1px solid rgba(22,217,117,0.2);
-    border-radius:14px;padding:12px 24px;display:inline-block;margin-bottom:14px;
-  }
-  .vp-popup-price-sold{font-family:var(--disp);font-size:clamp(2.2rem,5vw,3.4rem);font-weight:900;color:var(--green);line-height:1;animation:amountCount .4s ease}
+  .vp-popup-body{padding:12px 20px 18px;text-align:center}
+  .vp-popup-verdict-sold{display:inline-flex;align-items:center;gap:8px;padding:6px 20px;border-radius:100px;background:rgba(22,217,117,0.1);border:1px solid rgba(22,217,117,0.3);font-size:12px;font-weight:800;color:var(--green);letter-spacing:.15em;text-transform:uppercase;margin-bottom:10px;animation:badgePop .3s ease}
+  .vp-popup-verdict-unsold{display:inline-flex;align-items:center;gap:8px;padding:6px 20px;border-radius:100px;background:rgba(240,74,74,0.1);border:1px solid rgba(240,74,74,0.25);font-size:12px;font-weight:800;color:var(--red);letter-spacing:.15em;text-transform:uppercase;margin-bottom:10px;animation:badgePop .3s ease}
+  .vp-popup-player-name{font-family:var(--disp);font-size:clamp(1.6rem,4.5vw,2.8rem);font-weight:900;line-height:1;letter-spacing:.03em;margin-bottom:4px}
+  .vp-popup-player-meta{font-size:13px;color:var(--text2);margin-bottom:12px}
+  .vp-popup-price-box-sold{background:rgba(22,217,117,0.07);border:1px solid rgba(22,217,117,0.2);border-radius:14px;padding:10px 24px;display:inline-block;margin-bottom:12px}
+  .vp-popup-price-sold{font-family:var(--disp);font-size:clamp(2rem,5vw,3.4rem);font-weight:900;color:var(--green);line-height:1;animation:amountCount .4s ease}
   .vp-popup-price-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px}
-
-  .vp-popup-price-box-unsold{
-    background:rgba(240,74,74,0.05);border:1px solid rgba(240,74,74,0.15);
-    border-radius:14px;padding:12px 24px;display:inline-block;margin-bottom:14px;
-  }
-  .vp-popup-price-unsold{font-family:var(--disp);font-size:clamp(1.6rem,3.5vw,2.4rem);font-weight:900;color:var(--red);line-height:1}
-
-  /* Team row in popup */
-  .vp-popup-team-row{
-    display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:18px;
-    padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
-    border-radius:12px;animation:fadeSlideIn .4s .1s both ease;
-  }
-  .vp-popup-team-logo{width:44px;height:44px;border-radius:11px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:.85rem;font-weight:800;color:#fff}
+  .vp-popup-price-box-unsold{background:rgba(240,74,74,0.05);border:1px solid rgba(240,74,74,0.15);border-radius:14px;padding:10px 24px;display:inline-block;margin-bottom:12px}
+  .vp-popup-price-unsold{font-family:var(--disp);font-size:clamp(1.4rem,3.5vw,2.4rem);font-weight:900;color:var(--red);line-height:1}
+  .vp-popup-team-row{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:14px;padding:10px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;animation:fadeSlideIn .4s .1s both ease}
+  .vp-popup-team-logo{width:40px;height:40px;border-radius:11px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:.85rem;font-weight:800;color:#fff}
   .vp-popup-team-logo img{width:100%;height:100%;object-fit:cover}
   .vp-popup-team-info{text-align:left}
   .vp-popup-team-acquired-label{font-size:10px;color:rgba(22,217,117,0.6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
-  .vp-popup-team-name{font-weight:700;font-size:1.05rem;color:var(--text)}
+  .vp-popup-team-name{font-weight:700;font-size:1rem;color:var(--text)}
   .vp-popup-team-budget{font-size:12px;color:var(--text3);margin-top:2px}
-
-  .vp-popup-unsold-msg{font-size:14px;color:#7a3535;margin-bottom:16px;font-style:italic}
-  .vp-dismiss-btn{
-    width:100%;padding:12px;border-radius:12px;
-    background:var(--bg3);border:1px solid var(--border2);
-    color:var(--text);font-family:var(--body);font-size:14px;font-weight:600;
-    cursor:pointer;transition:background .15s,border-color .15s;
-    display:flex;align-items:center;justify-content:center;gap:8px;
-  }
-  .vp-dismiss-btn:hover{background:var(--bg4);border-color:var(--border2)}
+  .vp-popup-unsold-msg{font-size:14px;color:#7a3535;margin-bottom:14px;font-style:italic}
+  .vp-dismiss-btn{width:100%;padding:14px;border-radius:12px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:var(--body);font-size:15px;font-weight:600;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;-webkit-tap-highlight-color:transparent}
+  .vp-dismiss-btn:active{background:var(--bg4)}
   .vp-dismiss-btn svg{width:16px;height:16px}
 
   /* RIGHT PANEL */
   .vp-right{display:flex;flex-direction:column;overflow:hidden;background:var(--bg2)}
   .vp-tabs{display:flex;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0}
-  .vp-tab{flex:1;padding:9px 4px;text-align:center;font-size:10px;font-weight:700;color:var(--text3);cursor:pointer;border-right:1px solid var(--border);text-transform:uppercase;letter-spacing:.07em;transition:color .15s,background .15s}
+  .vp-tab{flex:1;padding:0 4px;height:44px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text3);cursor:pointer;border-right:1px solid var(--border);text-transform:uppercase;letter-spacing:.07em;transition:color .15s,background .15s;-webkit-tap-highlight-color:transparent}
   .vp-tab:last-child{border-right:none}
   .vp-tab.active{color:var(--text);background:var(--bg2)}
   .vp-tab:hover:not(.active){color:var(--text2)}
@@ -344,10 +196,9 @@ const CSS = `
   .vp-panel-scroll::-webkit-scrollbar{width:3px}
   .vp-panel-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 
-  /* Team cards */
   .vp-teams{padding:10px;display:flex;flex-direction:column;gap:8px}
   .vp-team-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
-  .vp-team-card-header{display:flex;align-items:center;gap:10px;padding:10px 12px}
+  .vp-team-card-header{display:flex;align-items:center;gap:10px;padding:12px 12px}
   .vp-team-badge{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:10px;font-weight:800;color:#fff;flex-shrink:0;overflow:hidden}
   .vp-team-badge img{width:100%;height:100%;object-fit:cover}
   .vp-team-name-sm{font-weight:600;font-size:13px;line-height:1.2}
@@ -355,35 +206,66 @@ const CSS = `
   .vp-budget-track{height:3px;background:var(--bg);margin:0 12px 9px;border-radius:2px;overflow:hidden}
   .vp-budget-fill{height:100%;border-radius:2px;transition:width .6s ease}
   .vp-team-players-full{display:flex;flex-wrap:wrap;gap:4px;padding:0 10px 10px}
-  .vp-player-mini-full{display:flex;align-items:center;gap:5px;padding:3px 9px;background:var(--bg4);border:1px solid var(--border);border-radius:6px;font-size:11px;white-space:nowrap}
+  .vp-player-mini-full{display:flex;align-items:center;gap:5px;padding:5px 9px;background:var(--bg4);border:1px solid var(--border);border-radius:6px;font-size:11px;white-space:nowrap}
   .vp-mini-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
   .vp-mini-price{font-size:10px;color:var(--text3);margin-left:2px}
-
-  /* Player rows */
-  .vp-prow{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border)}
+  .vp-prow{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border)}
   .vp-prow:last-child{border-bottom:none}
-  .vp-prow-av{width:30px;height:30px;border-radius:50%;background:var(--bg4);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+  .vp-prow-av{width:34px;height:34px;border-radius:50%;background:var(--bg4);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
   .vp-prow-av img{width:100%;height:100%;object-fit:cover}
-  .vp-prow-name{font-size:12px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .vp-prow-name{font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .vp-prow-role{font-size:10px;color:var(--text3)}
-  .vp-status-pill{padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700;flex-shrink:0}
+  .vp-status-pill{padding:4px 10px;border-radius:100px;font-size:10px;font-weight:700;flex-shrink:0}
   .vp-s-sold{background:rgba(22,217,117,.1);color:var(--green)}
   .vp-s-unsold{background:rgba(240,74,74,.1);color:var(--red)}
   .vp-s-available{background:rgba(245,166,35,.1);color:var(--amber)}
 
-  /* Footer */
-  .vp-footer{text-align:center;padding:7px;font-size:10px;color:var(--text3);letter-spacing:.04em;background:var(--bg);border-top:1px solid var(--border);flex-shrink:0}
+  /* MOBILE BOTTOM SHEET */
+  .vp-sheet-backdrop{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,0.55);animation:backdropIn .2s ease}
+  .vp-sheet{position:fixed;left:0;right:0;bottom:0;z-index:5001;max-height:72vh;display:flex;flex-direction:column;background:var(--bg2);border-radius:20px 20px 0 0;border-top:1px solid var(--border2);animation:sheetUp .3s cubic-bezier(.22,1,.36,1);padding-bottom:var(--sab)}
+  .vp-sheet-handle{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,0.18);margin:12px auto 8px}
+  .vp-sheet-header{display:flex;padding:0 16px 8px;gap:4px;border-bottom:1px solid var(--border);flex-shrink:0}
+  .vp-sheet-tab{flex:1;height:40px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text3);border-radius:8px;cursor:pointer;text-transform:uppercase;letter-spacing:.07em;-webkit-tap-highlight-color:transparent}
+  .vp-sheet-tab.active{color:var(--text);background:var(--bg3)}
+  .vp-sheet-scroll{flex:1;overflow-y:auto}
+  .vp-sheet-scroll::-webkit-scrollbar{display:none}
 
-  /* RESPONSIVE */
+  /* FLOATING CHAT FAB */
+  .vp-chat-fab{position:fixed;bottom:calc(20px + var(--sab));right:20px;z-index:4000;width:52px;height:52px;border-radius:50%;background:#16d975;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(22,217,117,0.35);transition:transform .2s,box-shadow .2s;-webkit-tap-highlight-color:transparent}
+  .vp-chat-fab:active{transform:scale(0.93)}
+  .vp-chat-fab svg{width:22px;height:22px;color:#06090f}
+  .vp-chat-badge{position:absolute;top:-4px;right:-4px;width:18px;height:18px;border-radius:50%;background:#f04a4a;border:2px solid #06090f;font-size:10px;font-weight:800;color:#fff;display:flex;align-items:center;justify-content:center}
+
+  /* CHAT SHEET */
+  .vp-chat-sheet{position:fixed;left:0;right:0;bottom:0;z-index:6000;height:72vh;display:flex;flex-direction:column;background:rgba(12,18,32,0.97);border-radius:20px 20px 0 0;border-top:1px solid rgba(255,255,255,0.1);box-shadow:0 -8px 40px rgba(0,0,0,0.5);animation:sheetUp .28s cubic-bezier(.22,1,.36,1);padding-bottom:calc(8px + var(--sab))}
+  .vp-chat-sheet.closed{display:none}
+  .vp-chat-sheet-handle{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,0.15);margin:12px auto 0;flex-shrink:0}
+  .vp-chat-sheet-inner{flex:1;display:flex;flex-direction:column;overflow:hidden;margin-top:8px}
+
+  /* PANEL TOGGLE */
+  .vp-panel-toggle{display:none;position:fixed;bottom:calc(84px + var(--sab));right:20px;z-index:3999;padding:9px 18px;border-radius:100px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;-webkit-tap-highlight-color:transparent;box-shadow:0 4px 16px rgba(0,0,0,0.4);align-items:center;gap:7px}
+  .vp-panel-toggle:active{transform:scale(0.96)}
+
+  .vp-footer{text-align:center;padding:7px;padding-bottom:calc(7px + var(--sab));font-size:10px;color:var(--text3);letter-spacing:.04em;background:var(--bg);border-top:1px solid var(--border);flex-shrink:0}
+
+  @media(min-width:861px){
+    .vp-main{grid-template-columns:1fr 310px}
+    .vp-panel-toggle{display:none!important}
+    .vp-chat-fab{bottom:24px;right:24px}
+  }
   @media(max-width:860px){
     .vp-main{grid-template-columns:1fr}
-    .vp-right{border-top:1px solid var(--border);max-height:300px}
+    .vp-right{display:none}
     .vp-center{border-right:none}
+    .vp-panel-toggle{display:flex}
+    .vp-img-zone{min-height:38vh}
+    .vp-info-bar{max-height:52vh;padding:12px 16px 14px}
+    .vp-header{padding:9px 14px}
+    .vp-event-name{font-size:1.15rem}
   }
   @media(max-width:520px){
-    .vp-header{padding:8px 12px}
     .vp-info-bar{padding:10px 12px 12px}
-    .vp-popup-card{border-radius:16px}
+    .vp-stat-chip{padding:7px 10px;min-width:48px}
   }
   @media(min-width:1280px){
     .vp-main{grid-template-columns:1fr 360px}
@@ -394,40 +276,6 @@ const CSS = `
     .vp-strip-val{font-size:2.2rem}
     .vp-strip-label{font-size:13px}
   }
-    /* FLOATING CHAT */
-.vp-chat-fab{
-  position:fixed;bottom:24px;right:24px;z-index:7000;
-  width:48px;height:48px;border-radius:50%;
-  background:#16d975;border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 20px rgba(22,217,117,0.4);
-  transition:transform .2s,box-shadow .2s;
-}
-.vp-chat-fab:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(22,217,117,0.5)}
-.vp-chat-fab svg{width:22px;height:22px;color:#06090f}
-.vp-chat-badge{
-  position:absolute;top:-4px;right:-4px;
-  width:18px;height:18px;border-radius:50%;
-  background:#f04a4a;border:2px solid #06090f;
-  font-size:10px;font-weight:800;color:#fff;
-  display:flex;align-items:center;justify-content:center;
-}
-.vp-chat-drawer{
-  position:fixed;bottom:84px;right:24px;z-index:7000;
-  width:320px;height:480px;
-  border-radius:16px;overflow:hidden;
-  border:1px solid rgba(255,255,255,0.1);
-  box-shadow:0 20px 60px rgba(0,0,0,0.6);
-  backdrop-filter:blur(12px);
-  background:rgba(12,18,32,0.85);
-  display:flex;flex-direction:column;
-  animation:slideUp .25s ease;
-}
-.vp-chat-drawer.closed{display:none}
-@media(max-width:520px){
-  .vp-chat-drawer{width:calc(100vw - 32px);right:16px;bottom:80px}
-  .vp-chat-fab{bottom:16px;right:16px}
-}
 `;
 
 function injectStyles() {
@@ -442,74 +290,72 @@ function initials(name = '') {
   return name.split(' ').map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase();
 }
 
-/* ── SVG ICONS (professional, no emoji) ── */
 const IconExpand = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" />
-    <path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+    <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/>
+    <path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
   </svg>
 );
 const IconShrink = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M8 3v3a2 2 0 0 1-2 2H3" /><path d="M21 8h-3a2 2 0 0 1-2-2V3" />
-    <path d="M3 16h3a2 2 0 0 1 2 2v3" /><path d="M16 21v-3a2 2 0 0 1 2-2h3" />
+    <path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/>
+    <path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>
   </svg>
 );
 const IconBat = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="4" y1="20" x2="14" y2="10" /><path d="M14 10 l6 -6 a2 2 0 0 0-3-3 l-6 6" />
-    <circle cx="6" cy="18" r="2" />
+    <line x1="4" y1="20" x2="14" y2="10"/><path d="M14 10 l6 -6 a2 2 0 0 0-3-3 l-6 6"/>
+    <circle cx="6" cy="18" r="2"/>
   </svg>
 );
 const IconClock = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 16 14" />
+    <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/>
   </svg>
 );
 const IconArrowRight = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
   </svg>
 );
 const IconCheckCircle = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
   </svg>
 );
 const IconXCircle = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+    <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
   </svg>
 );
 const IconTrophy = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-    <path d="M4 22h16" /><path d="M10 22v-4.3a5 5 0 0 1-3-4.7V4h10v9a5 5 0 0 1-3 4.7V22" />
+    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+    <path d="M4 22h16"/><path d="M10 22v-4.3a5 5 0 0 1-3-4.7V4h10v9a5 5 0 0 1-3 4.7V22"/>
   </svg>
 );
 const IconCoin = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="9" /><path d="M14.5 9A3 3 0 0 0 9 10v4a3 3 0 0 0 5.5 1" />
+    <circle cx="12" cy="12" r="9"/><path d="M14.5 9A3 3 0 0 0 9 10v4a3 3 0 0 0 5.5 1"/>
   </svg>
 );
 const IconCake = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8" /><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2 1 2 1" />
-    <line x1="12" y1="11" x2="12" y2="7" /><path d="M10 7 C10 5 14 5 14 7" />
+    <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2 1 2 1"/>
+    <line x1="12" y1="11" x2="12" y2="7"/><path d="M10 7 C10 5 14 5 14 7"/>
   </svg>
 );
 const IconFlag = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" y1="22" x2="4" y2="15" />
+    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
   </svg>
 );
 const IconTag = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" />
+    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>
   </svg>
 );
 
-/* ── SOLD POPUP ── */
 function SoldPopup({ popup, onDismiss }) {
   const overlayRef = useRef(null);
   useEffect(() => { if (overlayRef.current) spawnConfetti(overlayRef.current); }, []);
@@ -563,7 +409,6 @@ function SoldPopup({ popup, onDismiss }) {
   );
 }
 
-/* ── UNSOLD POPUP ── */
 function UnsoldPopup({ popup, onDismiss }) {
   const { player } = popup;
   return (
@@ -580,9 +425,7 @@ function UnsoldPopup({ popup, onDismiss }) {
           <div className="vp-popup-img-grad-unsold" />
         </div>
         <div className="vp-popup-body">
-          <div className="vp-popup-verdict-unsold">
-            <IconXCircle /> Unsold
-          </div>
+          <div className="vp-popup-verdict-unsold"><IconXCircle /> Unsold</div>
           <div className="vp-popup-player-name" style={{ color: '#94a3b8' }}>{player.name}</div>
           <div className="vp-popup-player-meta">
             {player.role}{player.age ? ` · Age ${player.age}` : ''}
@@ -601,10 +444,9 @@ function UnsoldPopup({ popup, onDismiss }) {
   );
 }
 
-/* ══════════════════════
-   MAIN COMPONENT
-══════════════════════ */
 export default function ViewerPage({ token }) {
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -613,13 +455,11 @@ export default function ViewerPage({ token }) {
   const [popup, setPopup] = useState(null);
   const [activeTab, setActiveTab] = useState('teams');
   const [fullscreen, setFullscreen] = useState(false);
-  const [chatOpen, setChatOpen] = useState(true);
 
-  /* Refs for reliable popup detection */
-  const prevStatusRef = useRef(null);  // previous status string
-  const prevPlayerIdRef = useRef(null);  // previous player _id
-  const prevSessionRef = useRef(null);  // full previous session snapshot
-  const shownPopupRef = useRef(null);  // composite key of last popup shown: "playerId:status"
+  const prevStatusRef = useRef(null);
+  const prevPlayerIdRef = useRef(null);
+  const prevSessionRef = useRef(null);
+  const shownPopupRef = useRef(null);
 
   useEffect(() => { injectStyles(); }, []);
 
@@ -633,40 +473,22 @@ export default function ViewerPage({ token }) {
     try {
       const d = await api.getEventLive(token);
       const curr = d.currentSession;
-
-      /* ── POPUP DETECTION (robust) ──
-         Show popup when:
-         (a) Status transitions to Sold/Unsold on the SAME player, OR
-         (b) A NEW player appears that is already Sold/Unsold (page load / rejoin)
-         De-duplicate using a composite key "playerId:status".
-      */
       if (curr?.player?._id && (curr.status === 'Sold' || curr.status === 'Unsold')) {
         const compositeKey = `${curr.player._id}:${curr.status}`;
         const prevKey = `${prevPlayerIdRef.current}:${prevStatusRef.current}`;
-
         const isNewTransition = compositeKey !== shownPopupRef.current && compositeKey !== prevKey;
-
         if (isNewTransition) {
           shownPopupRef.current = compositeKey;
           if (curr.status === 'Sold') {
-            setPopup({
-              type: 'sold',
-              player: curr.player,
-              price: curr.currentBid,
-              team: curr.currentBidTeam,
-              teamName: curr.currentBidTeamName
-            });
+            setPopup({ type: 'sold', player: curr.player, price: curr.currentBid, team: curr.currentBidTeam, teamName: curr.currentBidTeamName });
           } else {
             setPopup({ type: 'unsold', player: curr.player });
           }
         }
       }
-
-      /* Save previous state */
       prevStatusRef.current = curr?.status ?? null;
       prevPlayerIdRef.current = curr?.player?._id ?? null;
       prevSessionRef.current = curr;
-
       setData(d);
       setLastUpdated(new Date());
       setError(null);
@@ -692,6 +514,7 @@ export default function ViewerPage({ token }) {
       </div>
     </div>
   );
+
   if (error) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#06090f', color: '#7a90b8', padding: 24, fontFamily: 'Barlow Condensed,sans-serif' }}>
       <div style={{ textAlign: 'center' }}>
@@ -709,12 +532,10 @@ export default function ViewerPage({ token }) {
   const isSoldOrUnsold = sess?.status === 'Sold' || sess?.status === 'Unsold';
   const isLive = !!sess && !isSoldOrUnsold;
   const roleColor = sess?.player ? (ROLE_COLORS[sess.player.role] || '#f5a623') : '#f5a623';
-
   const soldPlayers = players.filter(p => p.status === 'Sold');
   const unsoldPlayers = players.filter(p => p.status === 'Unsold');
   const availablePlayers = players.filter(p => p.status === 'Available');
 
-  /* ── Detail chips with SVG icons ── */
   const detailChips = sess?.player ? [
     sess.player.basePrice != null && { icon: <IconCoin />, label: `Base ${formatCurrency(sess.player.basePrice)}` },
     sess.player.age && { icon: <IconCake />, label: `Age ${sess.player.age}` },
@@ -723,7 +544,6 @@ export default function ViewerPage({ token }) {
     sess.player.category && { icon: <IconTag />, label: sess.player.category },
   ].filter(Boolean) : [];
 
-  /* ── Fullscreen overlay ── */
   const renderFsOverlayInfo = () => {
     if (!sess?.player) return null;
     const isSold = sess.status === 'Sold';
@@ -737,7 +557,7 @@ export default function ViewerPage({ token }) {
           {sess.player.age ? ` · Age ${sess.player.age}` : ''}
         </div>
         <div className="vp-fs-bottom-row">
-          <div className="vp-fs-status-block">
+          <div>
             {isSold ? (
               <>
                 <div className="vp-fs-status-label" style={{ color: 'rgba(22,217,117,0.6)' }}>Acquired For</div>
@@ -745,16 +565,11 @@ export default function ViewerPage({ token }) {
                 {sess.currentBidTeam && (
                   <div className="vp-fs-status-team">
                     <div className="vp-fs-team-logo" style={{ background: sess.currentBidTeam.color || '#172038' }}>
-                      {sess.currentBidTeam.logo
-                        ? <img src={sess.currentBidTeam.logo} alt="" />
-                        : <span style={{ fontSize: '.85rem' }}>{sess.currentBidTeam.shortName}</span>
-                      }
+                      {sess.currentBidTeam.logo ? <img src={sess.currentBidTeam.logo} alt="" /> : <span style={{ fontSize: '.85rem' }}>{sess.currentBidTeam.shortName}</span>}
                     </div>
                     <div>
                       <div className="vp-fs-team-name">{sess.currentBidTeamName}</div>
-                      {sess.currentBidTeam.remainingBudget != null && (
-                        <div className="vp-fs-team-budget">Remaining: {formatCurrency(sess.currentBidTeam.remainingBudget)}</div>
-                      )}
+                      {sess.currentBidTeam.remainingBudget != null && <div className="vp-fs-team-budget">Remaining: {formatCurrency(sess.currentBidTeam.remainingBudget)}</div>}
                     </div>
                   </div>
                 )}
@@ -763,14 +578,11 @@ export default function ViewerPage({ token }) {
               <>
                 <div className="vp-fs-verdict-unsold"><IconXCircle /> Unsold</div>
                 <div style={{ marginTop: 8, fontSize: 'clamp(12px,1.6vw,16px)', color: '#7a3535' }}>No team placed a bid</div>
-                <div style={{ marginTop: 4, fontSize: 'clamp(10px,1.2vw,13px)', color: '#3a4f6e' }}>Base price: {formatCurrency(sess.player.basePrice)}</div>
               </>
             ) : (
               <>
                 <div className="vp-fs-status-label">Current Bid</div>
-                <div className="vp-fs-status-amount" style={{ color: sess.currentBidTeam ? '#16d975' : '#3a4f6e' }}>
-                  {formatCurrency(sess.currentBid)}
-                </div>
+                <div className="vp-fs-status-amount" style={{ color: sess.currentBidTeam ? '#16d975' : '#3a4f6e' }}>{formatCurrency(sess.currentBid)}</div>
                 {sess.currentBidTeamName ? (
                   <div className="vp-fs-status-team">
                     {sess.currentBidTeam?.logo
@@ -785,9 +597,7 @@ export default function ViewerPage({ token }) {
                 {sess.bids?.length > 0 && (
                   <div className="vp-fs-bid-chips" style={{ marginTop: 12 }}>
                     {[...sess.bids].reverse().slice(0, 5).map((b, i) => (
-                      <div key={i} className={`vp-fs-bid-chip${i === 0 ? ' vp-fs-bid-chip-top' : ''}`}>
-                        {b.teamName} · {formatCurrency(b.amount)}
-                      </div>
+                      <div key={i} className={`vp-fs-bid-chip${i === 0 ? ' vp-fs-bid-chip-top' : ''}`}>{b.teamName} · {formatCurrency(b.amount)}</div>
                     ))}
                   </div>
                 )}
@@ -808,7 +618,6 @@ export default function ViewerPage({ token }) {
     );
   };
 
-  /* ── Non-fullscreen acquired/unsold bar ── */
   const renderAcquiredBar = () => {
     if (!sess) return null;
     if (sess.status === 'Sold' && sess.currentBidTeamName) {
@@ -822,7 +631,6 @@ export default function ViewerPage({ token }) {
           </div>
           <div>
             <div className="vp-acq-label" style={{ color: 'rgba(22,217,117,0.6)' }}>Acquired by</div>
-            {/* Full team name here, not shortName */}
             <div className="vp-acq-name">{sess.currentBidTeamName}</div>
           </div>
           <div className="vp-acq-price" style={{ color: '#16d975' }}>{formatCurrency(sess.currentBid)}</div>
@@ -846,49 +654,130 @@ export default function ViewerPage({ token }) {
     return null;
   };
 
-  /* ── Status badge on image ── */
   const renderImgStatusBadge = () => {
     if (!sess) return null;
-    if (isLive && sess.status !== 'Paused') {
-      return (
-        <div className="vp-img-status-badge live">
-          <span className="vp-live-dot" />
-          Live Bidding
-        </div>
-      );
-    }
-    if (sess.status === 'Sold') {
-      return (
-        <div className="vp-img-status-badge sold">
-          <IconCheckCircle /> Sold
-        </div>
-      );
-    }
-    if (sess.status === 'Unsold') {
-      return (
-        <div className="vp-img-status-badge unsold">
-          <IconXCircle /> Unsold
-        </div>
-      );
-    }
+    if (isLive && sess.status !== 'Paused') return <div className="vp-img-status-badge live"><span className="vp-live-dot" />Live Bidding</div>;
+    if (sess.status === 'Sold') return <div className="vp-img-status-badge sold"><IconCheckCircle /> Sold</div>;
+    if (sess.status === 'Unsold') return <div className="vp-img-status-badge unsold"><IconXCircle /> Unsold</div>;
     return null;
   };
 
+  /* Shared panel content */
+  const PanelContent = () => (
+    <div className="vp-panel-scroll">
+      {activeTab === 'teams' && (
+        <div className="vp-teams">
+          {teams.map(t => {
+            const spent = t.budget - t.remainingBudget;
+            const pct = Math.min(100, Math.round((spent / t.budget) * 100));
+            return (
+              <div key={t._id} className="vp-team-card">
+                <div className="vp-team-card-header">
+                  <div className="vp-team-badge" style={{ background: t.logo ? 'transparent' : (t.color || '#172038') }}>
+                    {t.logo ? <img src={t.logo} alt={t.name} /> : t.shortName}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="vp-team-name-sm" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</div>
+                    <div style={{ fontSize: 10, color: '#3a4f6e' }}>{t.players.length} players · {pct}% spent</div>
+                  </div>
+                  <div className="vp-team-budget-sm" style={{ color: pct > 80 ? '#f5a623' : '#16d975' }}>{formatCurrency(t.remainingBudget)}</div>
+                </div>
+                <div className="vp-budget-track">
+                  <div className="vp-budget-fill" style={{ width: `${pct}%`, background: t.color || '#3b82f6' }} />
+                </div>
+                {t.players.length > 0 ? (
+                  <div className="vp-team-players-full">
+                    {t.players.map(p => (
+                      <div key={p._id} className="vp-player-mini-full">
+                        <div className="vp-mini-dot" style={{ background: ROLE_COLORS[p.role] || '#64748b' }} />
+                        <span>{p.name}</span>
+                        {p.soldPrice != null && <span className="vp-mini-price">{formatCurrency(p.soldPrice)}</span>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ padding: '6px 12px 10px', fontSize: 11, color: '#3a4f6e', fontStyle: 'italic' }}>No players yet</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {activeTab === 'recent' && (
+        history.length === 0
+          ? <div style={{ textAlign: 'center', padding: '28px 0', color: '#3a4f6e', fontSize: 13 }}>No sales yet</div>
+          : history.slice(0, 25).map(h => (
+            <div key={h._id} className="vp-prow">
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: h.status === 'Sold' ? '#16d975' : '#f04a4a', flexShrink: 0 }} />
+              <div className="vp-prow-av">{h.player?.imageUrl ? <img src={h.player.imageUrl} alt="" /> : initials(h.player?.name)}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="vp-prow-name">{h.player?.name}</div>
+                <div className="vp-prow-role">{h.player?.role}</div>
+              </div>
+              {h.status === 'Sold'
+                ? <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#16d975' }}>{formatCurrency(h.currentBid)}</div>
+                    <div style={{ fontSize: 10, color: '#3a4f6e' }}>{h.currentBidTeam?.name || h.currentBidTeam?.shortName}</div>
+                  </div>
+                : <span className="vp-status-pill vp-s-unsold">Unsold</span>
+              }
+            </div>
+          ))
+      )}
+      {activeTab === 'all' && (
+        <>
+          <div style={{ display: 'flex', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+            <span className="vp-status-pill vp-s-sold">{soldPlayers.length} Sold</span>
+            <span className="vp-status-pill vp-s-available">{availablePlayers.length} Available</span>
+            <span className="vp-status-pill vp-s-unsold">{unsoldPlayers.length} Unsold</span>
+          </div>
+          {players.map(p => {
+            const rc = ROLE_COLORS[p.role] || '#64748b';
+            return (
+              <div key={p._id} className="vp-prow">
+                <div className="vp-prow-av" style={{ background: `${rc}18`, color: rc }}>
+                  {p.imageUrl ? <img src={p.imageUrl} alt={p.name} /> : initials(p.name)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="vp-prow-name">{p.name}</div>
+                  <div className="vp-prow-role">{p.role}</div>
+                </div>
+                {p.status === 'Sold'
+                  ? <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#16d975' }}>{formatCurrency(p.soldPrice)}</div>
+                      <div style={{ fontSize: 10, color: '#3a4f6e' }}>{p.team?.name || p.team?.shortName}</div>
+                    </div>
+                  : <span className={`vp-status-pill vp-s-${p.status.toLowerCase()}`}>{p.status}</span>
+                }
+              </div>
+            );
+          })}
+        </>
+      )}
+    </div>
+  );
+
+  const TabBar = ({ className }) => (
+    <div className={className}>
+      {[['teams', 'Teams'], ['recent', 'Recent'], ['all', 'All']].map(([id, label]) => (
+        <div key={id} className={`${className === 'vp-tabs' ? 'vp-tab' : 'vp-sheet-tab'}${activeTab === id ? ' active' : ''}`}
+          onClick={() => setActiveTab(id)}>{label}</div>
+      ))}
+    </div>
+  );
+
   return (
     <div className="vp">
-      {/* ── POPUPS ── */}
       {popup?.type === 'sold' && <SoldPopup popup={popup} onDismiss={() => setPopup(null)} />}
       {popup?.type === 'unsold' && <UnsoldPopup popup={popup} onDismiss={() => setPopup(null)} />}
 
-      {/* ── HEADER ── */}
+      {/* HEADER */}
       {!fullscreen && (
         <div className="vp-header">
           <div className="vp-header-left">
             {event.logo
               ? <img src={event.logo} alt={event.name} className="vp-event-logo" />
-              : <div className="vp-event-logo-fb" style={{ color: roleColor }}>
-                <IconBat />
-              </div>
+              : <div className="vp-event-logo-fb" style={{ color: roleColor }}><IconBat /></div>
             }
             <div>
               <div className="vp-event-name">{event.name}</div>
@@ -905,7 +794,7 @@ export default function ViewerPage({ token }) {
         </div>
       )}
 
-      {/* ── STAT STRIP ── */}
+      {/* STAT STRIP */}
       {!fullscreen && (
         <div className="vp-strip">
           {[
@@ -922,18 +811,16 @@ export default function ViewerPage({ token }) {
         </div>
       )}
 
-      {/* ── MAIN ── */}
+      {/* MAIN */}
       <div className="vp-main" style={{ flex: 1, minHeight: 0 }}>
 
         {/* CENTER */}
         <div className={`vp-center${fullscreen ? ' fullscreen' : ''}`}>
-
-          <button className="vp-fs-btn" onClick={() => setFullscreen(f => !f)} title={fullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen player view'}>
+          <button className="vp-fs-btn" onClick={() => setFullscreen(f => !f)}>
             {fullscreen ? <IconShrink /> : <IconExpand />}
             {fullscreen ? 'Exit' : 'Fullscreen'}
           </button>
 
-          {/* Show player card if there's an active session (live OR just sold/unsold) */}
           {sess?.player ? (
             <div className="vp-player-card" key={sess.player._id}>
               <div className="vp-img-zone" style={{ background: `linear-gradient(160deg,#0a1628 0%,${roleColor}12 100%)` }}>
@@ -942,7 +829,6 @@ export default function ViewerPage({ token }) {
                   ? <img src={sess.player.imageUrl} alt={sess.player.name} />
                   : <div className="vp-img-fallback-big" style={{ color: roleColor }}>{initials(sess.player?.name)}</div>
                 }
-                {/* Status badge on the image */}
                 {!fullscreen && renderImgStatusBadge()}
                 {fullscreen && renderFsOverlayInfo()}
               </div>
@@ -950,7 +836,6 @@ export default function ViewerPage({ token }) {
               {!fullscreen && (
                 <div className="vp-info-bar">
                   {renderAcquiredBar()}
-
                   <div className="vp-info-top">
                     <div>
                       <div className="vp-role-tag" style={{ background: `${roleColor}18`, color: roleColor }}>{sess.player?.role}</div>
@@ -967,24 +852,21 @@ export default function ViewerPage({ token }) {
                       </div>
                       {sess.currentBidTeamName
                         ? <>
-                          <div className="vp-bid-team-mini" style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
-                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: sess.currentBidTeam?.color, flexShrink: 0 }} />
-                            {/* Full team name */}
-                            {sess.currentBidTeamName}
-                          </div>
-                          <div className="vp-bid-count-mini">{sess.bids?.length ?? 0} bid{sess.bids?.length !== 1 ? 's' : ''}</div>
-                        </>
+                            <div className="vp-bid-team-mini" style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+                              <div style={{ width: 8, height: 8, borderRadius: '50%', background: sess.currentBidTeam?.color, flexShrink: 0 }} />
+                              {sess.currentBidTeamName}
+                            </div>
+                            <div className="vp-bid-count-mini">{sess.bids?.length ?? 0} bid{sess.bids?.length !== 1 ? 's' : ''}</div>
+                          </>
                         : <div style={{ fontSize: 12, color: '#3a4f6e', marginTop: 4 }}>Base · No bids yet</div>
                       }
                     </div>
                   </div>
-
                   <div className="vp-detail-chips">
                     {detailChips.map((c, i) => (
                       <div key={i} className="vp-dchip">{c.icon}<span>{c.label}</span></div>
                     ))}
                   </div>
-
                   {sess.player?.stats && (
                     <div className="vp-stats-row">
                       {sess.player.stats.matches > 0 && <div className="vp-stat-chip"><div className="vp-stat-chip-val" style={{ color: '#7a90b8' }}>{sess.player.stats.matches}</div><div className="vp-stat-chip-label">Matches</div></div>}
@@ -995,7 +877,6 @@ export default function ViewerPage({ token }) {
                       {sess.player.stats.economy > 0 && <div className="vp-stat-chip"><div className="vp-stat-chip-val" style={{ color: '#c084fc' }}>{sess.player.stats.economy}</div><div className="vp-stat-chip-label">Econ</div></div>}
                     </div>
                   )}
-
                   {sess.bids?.length > 0 && (
                     <div className="vp-history-chips">
                       {[...sess.bids].reverse().slice(0, 7).map((b, i) => (
@@ -1009,12 +890,9 @@ export default function ViewerPage({ token }) {
               )}
             </div>
           ) : (
-            /* ── TRANSITION / PAUSED SCREEN ── */
             <div className="vp-transition">
               <div className="vp-transition-pitch" />
-              <div className="vp-transition-icon">
-                <IconClock />
-              </div>
+              <div className="vp-transition-icon"><IconClock /></div>
               <div className="vp-transition-title">Awaiting Next Player</div>
               <div className="vp-transition-sub">The auctioneer will nominate the next player shortly</div>
               {history.length > 0 && (
@@ -1030,137 +908,69 @@ export default function ViewerPage({ token }) {
           )}
         </div>
 
-        {/* RIGHT PANEL */}
+        {/* DESKTOP RIGHT PANEL */}
         {!fullscreen && (
           <div className="vp-right">
-            <div className="vp-tabs">
-              {[['teams', 'Teams'], ['recent', 'Recent'], ['all', 'All']].map(([id, label]) => (
-                <div key={id} className={`vp-tab${activeTab === id ? ' active' : ''}`} onClick={() => setActiveTab(id)}>{label}</div>
-              ))}
-            </div>
-
-            <div className="vp-panel-scroll">
-              {activeTab === 'teams' && (
-                <div className="vp-teams">
-                  {teams.map(t => {
-                    const spent = t.budget - t.remainingBudget;
-                    const pct = Math.min(100, Math.round((spent / t.budget) * 100));
-                    return (
-                      <div key={t._id} className="vp-team-card">
-                        <div className="vp-team-card-header">
-                          <div className="vp-team-badge" style={{ background: t.logo ? 'transparent' : (t.color || '#172038') }}>
-                            {t.logo ? <img src={t.logo} alt={t.name} /> : t.shortName}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div className="vp-team-name-sm" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</div>
-                            <div style={{ fontSize: 10, color: '#3a4f6e' }}>{t.players.length} players · {pct}% spent</div>
-                          </div>
-                          <div className="vp-team-budget-sm" style={{ color: pct > 80 ? '#f5a623' : '#16d975' }}>
-                            {formatCurrency(t.remainingBudget)}
-                          </div>
-                        </div>
-                        <div className="vp-budget-track">
-                          <div className="vp-budget-fill" style={{ width: `${pct}%`, background: t.color || '#3b82f6' }} />
-                        </div>
-                        {t.players.length > 0 ? (
-                          <div className="vp-team-players-full">
-                            {t.players.map(p => (
-                              <div key={p._id} className="vp-player-mini-full">
-                                <div className="vp-mini-dot" style={{ background: ROLE_COLORS[p.role] || '#64748b' }} />
-                                <span>{p.name}</span>
-                                {p.soldPrice != null && <span className="vp-mini-price">{formatCurrency(p.soldPrice)}</span>}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div style={{ padding: '6px 12px 10px', fontSize: 11, color: '#3a4f6e', fontStyle: 'italic' }}>No players yet</div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {activeTab === 'recent' && (
-                history.length === 0
-                  ? <div style={{ textAlign: 'center', padding: '28px 0', color: '#3a4f6e', fontSize: 13 }}>No sales yet</div>
-                  : history.slice(0, 25).map(h => (
-                    <div key={h._id} className="vp-prow">
-                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: h.status === 'Sold' ? '#16d975' : '#f04a4a', flexShrink: 0 }} />
-                      <div className="vp-prow-av">{h.player?.imageUrl ? <img src={h.player.imageUrl} alt="" /> : initials(h.player?.name)}</div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="vp-prow-name">{h.player?.name}</div>
-                        <div className="vp-prow-role">{h.player?.role}</div>
-                      </div>
-                      {h.status === 'Sold'
-                        ? <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: '#16d975' }}>{formatCurrency(h.currentBid)}</div>
-                          {/* Full team name in recent list */}
-                          <div style={{ fontSize: 10, color: '#3a4f6e' }}>{h.currentBidTeam?.name || h.currentBidTeam?.shortName}</div>
-                        </div>
-                        : <span className="vp-status-pill vp-s-unsold">Unsold</span>
-                      }
-                    </div>
-                  ))
-              )}
-
-              {activeTab === 'all' && (
-                <>
-                  <div style={{ display: 'flex', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
-                    <span className="vp-status-pill vp-s-sold">{soldPlayers.length} Sold</span>
-                    <span className="vp-status-pill vp-s-available">{availablePlayers.length} Available</span>
-                    <span className="vp-status-pill vp-s-unsold">{unsoldPlayers.length} Unsold</span>
-                  </div>
-                  {players.map(p => {
-                    const rc = ROLE_COLORS[p.role] || '#64748b';
-                    return (
-                      <div key={p._id} className="vp-prow">
-                        <div className="vp-prow-av" style={{ background: `${rc}18`, color: rc }}>
-                          {p.imageUrl ? <img src={p.imageUrl} alt={p.name} /> : initials(p.name)}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div className="vp-prow-name">{p.name}</div>
-                          <div className="vp-prow-role">{p.role}</div>
-                        </div>
-                        {p.status === 'Sold'
-                          ? <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                            <div style={{ fontSize: 12, fontWeight: 700, color: '#16d975' }}>{formatCurrency(p.soldPrice)}</div>
-                            {/* Full team name */}
-                            <div style={{ fontSize: 10, color: '#3a4f6e' }}>{p.team?.name || p.team?.shortName}</div>
-                          </div>
-                          : <span className={`vp-status-pill vp-s-${p.status.toLowerCase()}`}>{p.status}</span>
-                        }
-                      </div>
-                    );
-                  })}
-                </>
-              )}
-            </div>
+            <TabBar className="vp-tabs" />
+            <PanelContent />
           </div>
         )}
-        {/* ── FLOATING CHAT ── */}
-        <button
-          className="vp-chat-fab"
-          onClick={() => { setChatOpen(o => !o); setUnreadCount(0); }}
-          title="Live Chat"
-        >
+      </div>
+
+      {/* MOBILE PANEL TOGGLE */}
+      {!fullscreen && (
+        <button className="vp-panel-toggle" onClick={() => setPanelOpen(true)}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>
+          </svg>
+          Teams
+        </button>
+      )}
+
+      {/* MOBILE BOTTOM SHEET */}
+      {panelOpen && !fullscreen && (
+        <>
+          <div className="vp-sheet-backdrop" onClick={() => setPanelOpen(false)} />
+          <div className="vp-sheet">
+            <div className="vp-sheet-handle" />
+            <div className="vp-sheet-header">
+              {[['teams', 'Teams'], ['recent', 'Recent'], ['all', 'All']].map(([id, label]) => (
+                <div key={id} className={`vp-sheet-tab${activeTab === id ? ' active' : ''}`} onClick={() => setActiveTab(id)}>{label}</div>
+              ))}
+            </div>
+            <div className="vp-sheet-scroll">
+              <PanelContent />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* CHAT FAB */}
+      {!fullscreen && (
+        <button className="vp-chat-fab" onClick={() => { setChatOpen(o => !o); setUnreadCount(0); }} title="Live Chat">
           {chatOpen
-            ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-            : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+            ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           }
           {!chatOpen && unreadCount > 0 && (
             <span className="vp-chat-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
           )}
         </button>
+      )}
 
-        <div className={`vp-chat-drawer${chatOpen ? '' : ' closed'}`}>
-          <ChatPanel
-            token={token}
-            guestName={undefined}
-            onNewMessage={() => { if (!chatOpen) setUnreadCount(c => c + 1); }}
-          />
+      {/* CHAT SHEET */}
+      {!fullscreen && (
+        <div className={`vp-chat-sheet${chatOpen ? '' : ' closed'}`}>
+          <div className="vp-chat-sheet-handle" onClick={() => setChatOpen(false)} style={{ cursor: 'pointer', padding: '4px 0' }} />
+          <div className="vp-chat-sheet-inner">
+            <ChatPanel
+              token={token}
+              guestName={undefined}
+              onNewMessage={() => { if (!chatOpen) setUnreadCount(c => c + 1); }}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {!fullscreen && (
         <div className="vp-footer">
